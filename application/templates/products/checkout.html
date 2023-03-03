@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+
+<div class="container row">
+
+  <div class="col-md-6 col-lg-6">
+    <div class="mt-5 mb-3">
+      <h2 class="display-5">Checkout Page</h2>
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <ul class="flashes text-danger">
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% endwith %}
+
+    </div>
+
+    <form>
+
+      <div class="row">
+
+        <div class="col-12 mt-3">
+          <label for="first_name" class="form-label fw-light font-size-lg">Recipient's Contact Information</label>
+        </div>
+        <div class="col-6 mb-3">
+          <input type="text" class="form-control" id="first_name" name="first_name" placeholder="First Name" required>
+        </div>
+        <div class="col-6 mb-3">
+          <input type="text" class="form-control" id="last_name" name="last_name" placeholder="Last Name" required>
+        </div>
+        <div class="col-12 mb-3">
+          <input type="email" class="form-control" id="email" name="email" placeholder="someone@email.com" required>
+        </div>
+        <div class="col-12 mt-3">
+          <label for="address" class="form-label fw-light font-size-lg">Recipient's Address Information</label>
+        </div>
+        <div class="col-4">
+          <input type="text" class="form-control" name="delivery_house_nr" id="delivery_house_nr" placeholder="No."
+            required>
+        </div>
+        <div class="col-8">
+          <input type="text" class="form-control" name="delivery_street" id="delivery_street" placeholder="Street Name"
+            required>
+        </div>
+        <div class="col-12 mt-3">
+          <input type="text" class="form-control" name="delivery_additional" id="delivery_additional"
+            placeholder="Additional Address" required>
+        </div>
+        <div class="col-4 mt-3">
+          <input type="text" class="form-control" name="delivery_postal" id="delivery_postal" placeholder="Postal Code"
+            required>
+        </div>
+        <div class="col-4 mt-3">
+          <input type="text" class="form-control" name="delivery_state" id="delivery_state" placeholder="State"
+            required>
+        </div>
+        <div class="col-4 mt-3">
+          <input type="text" class="form-control" name="delivery_country" id="delivery_country" placeholder="Country"
+            required>
+        </div>
+        <div class="col-12 mt-3">
+          <label for="instructions">Additional Instruction (Optional)</label>
+          <input type="text" class="form-control" name="instructions" id="instructions"
+            placeholder="Ex. Please leave at reception">
+        </div>
+
+    </form>
+
+
+  </div>
+</div>
+
+<div class="col-md-3 col-lg-4">
+
+  <div class="mt-5 mb-3">
+    <h4 class="d-flex justify-content-between align-items-center mb-3">
+      <span class="text-danger">Cart Summary</span>
+      <span class="badge bg-danger rounded-pill">{{ products | length }}</span>
+    </h4>
+    <ul class="list-group mb-3">
+      {% for product in products %}
+      <li class="list-group-item d-flex justify-content-between lh-sm">
+        <div>
+          <h6 class="my-0">{{ product.name }}</h6>
+          <small class="text-muted">€ {{ product.price }} x {{ product.qty }}</small>
+        </div>
+        <span class="text-muted">€ {{ product.qty_total_price }}</span>
+      </li>
+      {% endfor %}
+
+      <li class="list-group-item d-flex justify-content-between">
+        <span>Grand Total (EUR)</span>
+        <strong>{{ grand_total }}</strong>
+      </li>
+      <li class="list-group-item d-flex bg-light justify-content-between">
+        <span>Total with Shipping Fees (EUR)</span>
+        <strong>{{ total_payment |round(2, 'floor') }}</strong>
+
+      </li>
+    </ul>
+
+    <form class="card p-2">
+      <div class="input-group">
+        <input type="text" class="form-control" disabled placeholder="Promo code">
+        <button type="submit" class="btn btn-secondary disabled">Redeem</button>
+      </div>
+    </form>
+
+    <button class="btn btn-lg btn-danger mt-3 mb-3" id="stripeme">Proceed to Stripe Payment</button>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+      console.log("Sanity check!");
+
+      // Get Stripe publishable key
+      fetch("/config")
+        .then((result) => { return result.json(); })
+        .then((data) => {
+          // Initialize Stripe.js
+          const stripe = Stripe(data.publicKey);
+
+          // Event handler
+          document.querySelector("#stripeme").addEventListener("click", () => {
+            // Get Checkout Session ID
+            fetch('/create-checkout-session')
+              .then((result) => { return result.json(); })
+              .then((data) => {
+                console.log(data);
+                // Redirect to Stripe Checkout
+                return stripe.redirectToCheckout({ sessionId: data.sessionId })
+              })
+              .then((res) => {
+                console.log(res);
+              });
+          });
+        });
+    </script>
+  </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Shopping Cart {% endblock %}
+
+{% block content %}
+
+
+<section class="text-center container">
+  <div class="row py-lg-5">
+    <div class="col-lg-6 col-md-8 mx-auto">
+      <h1 class="fw-light">Your Cart Summary</h1>
+
+    </div>
+  </div>
+</section>
+
+<div class="row mb-2">
+  {% if products %}
+  {% for product in products %}
+  <div class="col-md-6" style="padding-top: 1.5em ">
+    <div class="row g-0 border rounded overflow-hidden flex-md-row shadow-sm h-md-250 position-relative">
+      <div class="col-auto d-none d-lg-block">
+        <img src="{{ product['image'] }}" class="bd-placeholder-img" width="300" height="300" role="img"
+          aria-label="Placeholder: Thumbnail" />
+      </div>
+
+      <div class="col p-4 d-flex flex-column position-static">
+        <strong class="d-inline-block mb-2 text-primary">Delivery 1-2 Days</strong>
+        <h3 class="mb-0"><a href="{{ url_for('store.read', id=product['id']) }}">{{ product['name'] }}</a></h3>
+        <p class="card-text mb-auto">€ {{ product.price }} x {{ product.qty }} = € {{ product.qty_total_price }}</p>
+
+        <a href="{{ url_for('store.cart_remove_item', index=product['index']) }}">Remove 1 Qty</a>
+
+      </div>
+
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+</div>
+
+<div class="album py-5">
+  <div class="container">
+    {% if products %}
+    <p class="lead">Gross total of € {{ grand_total }}</p>
+		<p class="lead">+ standard shipping fee of € {{ shipping_fee }}</p>
+    <hr class="my-3" />
+		<h3 class="display-6"> Total payment: € {{ total_payment |round(2, 'floor') }}</h3>
+
+		<p> <a href="{{ url_for('store.checkout') }}" class="btn btn-lg btn-danger my-3">Proceed to checkout</a></p>
+    {% else %}
+    <h3>You have 0 items in your cart.</h3>
+    {% endif %}
+  </div>
+</div>
+</div>
+
+{% endblock %}

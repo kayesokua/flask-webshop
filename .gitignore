@@ -1,0 +1,29 @@
+# Ignore cache
+__pycache__/
+*.pyc
+
+# Ignore .DS_Store
+.DS_Store
+
+# Ignore virtual environment
+venv/
+env/
+
+# Ignore instance folder
+instance/
+migrations/
+
+# Ignore logs
+*.log
+
+# Ignore compiled Python files
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore backups
+*~
+.#*
+
+# Ignore environment variables
+.env

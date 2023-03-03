@@ -1,0 +1,57 @@
+<header>
+    <div class="collapse bg-danger" id="navbarHeader">
+        <div class="container">
+            <div class="row">
+                <div class="col-sm-8 col-md-7 py-4">
+                    <p class="text-white display-5">The place where far-reaching products come together</p>
+                    <p class="text-white">Currently shipping from 15 countries.</p>
+                    <p class="text-white">Don't see your favourite things? Join us and become a distributor.</p>
+                </div>
+                <div class="col-sm-4 offset-md-1 py-4">
+                    <h5 class="text-white fst-italic fw-bolder">{% if g.user %}Welcome back, {{ g.user['username'] |
+                        capitalize }}!{% else %} Navigation{% endif %}</h5>
+                    <ul class="list-unstyled display-6">
+                        <li>
+                            <hr class="" style="border-color:white">
+                        </li>
+                        {% if g.user.is_admin %}
+                        <li><a href="{{ url_for('store.add_product') }}" class="text-white">Add Product</a></li>
+                        {% endif %}
+
+                        {% if g.user %}
+                        <li><a href="{{ url_for('store.cart') }}" class="text-white">
+                                My Cart</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a href="{{ url_for('store.cart') }}" class="text-white">
+                            My Account</a></li>
+                        <li><a href="{{ url_for('auth.logout') }}" class="text-white">Log Out</a></li>
+                        {% else %}
+                        <li><a href="{{ url_for('auth.register') }}" class="text-white">Register</a></li>
+                        <li><a href="{{ url_for('auth.login') }}" class="text-white">Log In</a></li>
+                        {% endif %}
+
+
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="navbar navbar-dark bg-danger shadow-sm">
+        <div class="container">
+            <a href="{{ url_for('index') }}" class="navbar-brand d-flex align-items-center">
+
+                <strong>Your Webshop <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                        class="bi bi-clock-fill" viewBox="0 0 16 16">
+                        <path
+                            d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z" />
+                    </svg></strong>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarHeader"
+                aria-controls="navbarHeader" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+    </div>
+</header>

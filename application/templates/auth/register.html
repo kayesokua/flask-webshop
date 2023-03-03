@@ -1,0 +1,60 @@
+{% extends 'base_auth.html' %}
+
+{% block title %}Register for Account{% endblock %}
+{% block content %}
+
+
+
+<form method="post">
+
+  <h1 class="h2 mb-3 fw-normal">Register Your Account</h1>
+  
+  {% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul class="flashes text-danger">
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+  {% endwith %}
+
+  <div class="form-floating mb-3">
+    <input type="text" class="form-control" id="username" name="username" placeholder="Enter Username" value="{{ username }}" required>
+    <label for="username">Username</label>
+  </div>
+
+  <div class="form-floating mb-3">
+    <input type="password" class="form-control" id="password" name="password" placeholder="Enter Password" required>
+    <label for="password">Password</label>
+  </div>
+
+  <div class="form-floating mb-3">
+    <input type="password" class="form-control" id="password2" name="password2" placeholder="Confirm Password" required>
+    <label for="password2">Confirm Password</label>
+  </div>
+
+
+  <hr />
+
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" value="" id="flexCheckChecked" checked required>
+    <label class="form-check-label" for="flexCheckChecked">
+      I agree to our collection, use, and disclosure of your personal information in accordance with the General Data
+      Protection Regulation (GDPR).
+      Read more here.
+    </label>
+  </div>
+
+  <div class="d-grid gap-2">
+    <input type="submit" value="Register" class="btn btn-danger"/>
+  </div>
+
+
+  <hr />
+  <div>
+    Already have an account? <a href="{{ url_for('auth.login')}}"> Log In.</a>
+  </div>
+</form>
+
+{% endblock %}

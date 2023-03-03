@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Product Item{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="py-5">
+    <h2 class="display-5">Add Product Item</h2>
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <ul class="flashes text-danger">
+      {% for message in messages %}
+      <li>{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
+  </div>
+
+  <div class="row g-5">
+
+  </div>
+  <div class="col-md-6 col-lg-6">
+    <form method="post">
+      <div class="col-12 mt-3 mb-3">
+        <label for="name" class="form-label fw-light font-size-lg">Product Name</label>
+        <input type="text" class="form-control" id="name" name="name" placeholder="Product Name" required>
+      </div>
+      <div class="row g-3 mt-3 mb-3">
+        <div class="col-sm-6">
+          <label for="price" class="form-label fw-light font-size-lg">Price (€)</label>
+          <input type="number" class="form-control" id="price" name="price" placeholder="0.99" value="" required>
+        </div>
+        <div class="col-sm-6 mt-3 mb-3">
+          <label for="stock" class="form-label fw-light font-size-lg">Stock (Qty.)</label>
+          <input type="number" class="form-control" id="stock" name="stock" placeholder="10" value="" required>
+        </div>
+      </div>
+      <div class="col-12 mt-3 mb-3">
+        <label for="image" class="form-label fw-light font-size-lg">Image URL (Direct File Upload not yet available
+          )</label>
+        <input type="text" class="form-control" id="image" name="image"
+          placeholder="https://source.unsplash.com/random/300x300/?dessert">
+      </div>
+      <div class="col-12">
+        <label for="address" class="form-label fw-light font-size-lg">Product Description</label>
+        <textarea class="form-control" id="description" name="description"
+          placeholder="What are the key ingredients of the product and where is it from?" required></textarea>
+      </div>
+      <hr class="my-4">
+      <input type="submit" class="w-100 btn btn-outline-danger btn-lg" value="Submit" />
+    </form>
+  </div>
+</div>
+</div>
+
+{% endblock %}
