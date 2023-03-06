@@ -9,10 +9,6 @@ __pycache__/
 venv/
 env/
 
-# Ignore instance folder
-instance/
-migrations/
-
 # Ignore logs
 *.log
 
