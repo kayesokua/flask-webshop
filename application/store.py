@@ -105,14 +105,14 @@ def add_product():
 
         if not name:
             error = 'Name is required.'
-        elif not price or price < 0:
+        elif not float(price) or float(price) < 0:
             error = 'Price must be a positive number.'
-        elif not stock or stock < 0:
+        elif not stock or int(stock) < 0:
             error = 'Stock must be a positive integer.'
         elif not image:
             error = 'Image is required.'
-        elif not re.match(r'^https://.*\.(jpg|jpeg|png)$', image):
-            error = 'Image URL must start with "https://" and end with ".jpg", ".jpeg", or ".png".'
+        elif not re.match(r'^https://', image):
+            error = 'Image URL must start with "https://'
 
         if error is not None:
             flash(error)
