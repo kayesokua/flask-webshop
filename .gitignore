@@ -1,6 +1,7 @@
 # Ignore cache
 __pycache__/
 *.pyc
+.pytest_cache/
 
 # Ignore .DS_Store
 .DS_Store

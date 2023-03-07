@@ -1,7 +1,4 @@
-import sqlite3
-
-import pytest
-
+import sqlite3, string, secrets, pytest
 from application.db import get_db
 
 
@@ -36,6 +33,8 @@ def test_create_admin_command(runner, monkeypatch):
         Recorder.called = True
 
     monkeypatch.setattr("application.db.create_admin", fake_create_admin)
-    result = runner.invoke(args=["create-admin"])
+    username=''.join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(10))
+    password = ''.join(secrets.choice(string.ascii_letters + string.digits + string.punctuation) for _ in range(12))
+    result = runner.invoke(args=["create-admin",username, password])
     assert "Admin successfully created" in result.output
     assert Recorder.called
