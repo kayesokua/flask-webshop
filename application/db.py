@@ -25,10 +25,8 @@ def init_db():
     with current_app.open_resource('schema.sql') as f:
         db.executescript(f.read().decode('utf8'))
 
-def create_admin():
+def create_admin(username, password):
     db = get_db()
-    username = input("Enter username: ")
-    password = input("Enter password: ")
     is_active = True
     is_admin = True
     error = None
@@ -51,17 +49,6 @@ def create_admin():
     if error is not None:
         print(error)
 
-@click.command("create-admin")
-@click.argument("username")
-@click.argument("password")
-def create_admin_command(username, password):
-    create_admin(username, password)
-
-
-
-
-
-
 @click.command("test-db")
 def test_db_command():
     result = get_db()
@@ -70,13 +57,14 @@ def test_db_command():
 @click.command("init-db")
 def init_db_command():
     init_db()
-    
     click.echo("Initialized the database.")
 
 @click.command("create-admin")
-def create_admin_command():
-    create_admin()
-    
+@click.argument("username")
+@click.argument("password")
+def create_admin_command(username, password):
+    create_admin(username, password)
+
 def init_app(app):
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
