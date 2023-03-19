@@ -4,7 +4,7 @@ from flask import Blueprint, flash, g, redirect, render_template, request, sessi
 from werkzeug.security import check_password_hash
 from werkzeug.security import generate_password_hash
 
-from application.db import get_db
+from application.database import get_db
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -39,7 +39,7 @@ def load_logged_in_user():
 @bp.route("/register", methods=["GET", "POST"])
 def register():
     username = ""
-    
+
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
