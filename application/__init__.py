@@ -1,4 +1,5 @@
 import os
+
 from flask import Flask, render_template, redirect, url_for
 
 def create_app(test_config=None):
@@ -25,14 +26,11 @@ def create_app(test_config=None):
         pass
 
     # register the database commands
-    from application import db
-    db.init_app(app)
-    
+    from application.database import init_app
+    init_app(app)
+
     # apply the blueprints to the app
-    from application import auth, store
-
-
-    
+    from application.views import auth, store
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(store.bp)
@@ -41,7 +39,6 @@ def create_app(test_config=None):
     @app.errorhandler(401)
     def unauthorized_page(error):
         return render_template("errors/401.html"), 401
-
 
     @app.errorhandler(404)
     def page_not_found(error):

@@ -2,8 +2,8 @@ import stripe
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for, session, jsonify
 from werkzeug.exceptions import abort
 from collections import defaultdict
-from application.auth import login_required
-from application.db import get_db
+from application.views.auth import login_required
+from application.database import get_db
 import re
 from collections import defaultdict
 import os
