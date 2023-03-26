@@ -2,7 +2,9 @@ from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
 
+
 db = SQLAlchemy()
+
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -10,6 +12,7 @@ def create_app(config_class=Config):
     db.init_app(app)
 
     with app.app_context():
+        from application.models import store, auth
         db.create_all()
 
     from application.views import auth, store

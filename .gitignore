@@ -24,3 +24,5 @@ env/
 
 # Ignore environment variables
 .env
+
+.vscode/
