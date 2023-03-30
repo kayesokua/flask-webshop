@@ -1,39 +1,20 @@
-import os
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template
+from config import Config
+from application.extensions.db import db, migrate
 
-def create_app(test_config=None):
-    """Create and configure an instance of the Flask application."""
-    app = Flask(__name__, instance_relative_config=True)
-    app.config.from_mapping(
-        # a default secret that should be overridden by instance config
-        SECRET_KEY="dev",
-        # store the database in the instance folder
-        DATABASE=os.path.join(app.instance_path, "flaskr.sqlite"),
-    )
+def create_app(config_class=Config):
 
-    if test_config is None:
-        # load the instance config, if it exists, when not testing
-        app.config.from_pyfile("config.py", silent=True)
-    else:
-        # load the test config if passed in
-        app.config.update(test_config)
-
-    # ensure the instance folder exists
-    try:
-        os.makedirs(app.instance_path)
-    except OSError:
-        pass
-
-    # register the database commands
-    from application import db
+    app = Flask(__name__)
+    app.config.from_object(config_class)
     db.init_app(app)
-    
-    # apply the blueprints to the app
-    from application import auth, store
 
+    with app.app_context():
+        from application.models import store, auth
+        db.create_all()
 
-    
+        migrate.init_app(app, db, compare_type=True)
 
+    from application.views import auth, store
     app.register_blueprint(auth.bp)
     app.register_blueprint(store.bp)
     app.add_url_rule("/", endpoint="index")
@@ -41,7 +22,6 @@ def create_app(test_config=None):
     @app.errorhandler(401)
     def unauthorized_page(error):
         return render_template("errors/401.html"), 401
-
 
     @app.errorhandler(404)
     def page_not_found(error):

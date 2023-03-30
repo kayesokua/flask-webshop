@@ -34,9 +34,7 @@
       </div>
       <div class="col-12">
         <label for="address" class="form-label fw-light font-size-lg">Product Description</label>
-        <textarea class="form-control" id="description" name="description" placeholder = "What are the key ingredients of the product and where is it from?" required>
-          {{ request.form['description'] or product['description'] }}
-        </textarea>
+        <textarea class="form-control" id="description" name="description" placeholder = "What are the key ingredients of the product and where is it from?" required>{{ request.form['description'] or product['description'] }}</textarea>
       </div>
       <hr class="my-4">
       <input type="submit" class="w-100 btn btn-outline-danger btn-lg " value="Save" />

@@ -13,6 +13,9 @@ env/
 # Ignore logs
 *.log
 
+# Ignore migration
+migrations/
+
 # Ignore compiled Python files
 *.pyc
 *.pyo
@@ -24,3 +27,5 @@ env/
 
 # Ignore environment variables
 .env
+
+.vscode/

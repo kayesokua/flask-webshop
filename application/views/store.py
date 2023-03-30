@@ -1,12 +1,14 @@
 import stripe
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for, session, jsonify
 from werkzeug.exceptions import abort
+from application import db
 from collections import defaultdict
-from application.auth import login_required
-from application.db import get_db
+from application.views.auth import login_required
 import re
 from collections import defaultdict
 import os
+from application.models.auth import User
+from application.models.store import Product, Orders, OrderLine
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -19,45 +21,29 @@ stripe_keys = {
 
 bp = Blueprint("store", __name__)
 
-
 @bp.route("/config")
 def get_publishable_key():
     stripe_config = {"publicKey": stripe_keys["publishable_key"]}
     return jsonify(stripe_config)
 
-
 @bp.route("/")
 def index():
-    db = get_db()
-    products = db.execute("SELECT * FROM product").fetchall()
+    products = Product.query.all()
     return render_template("products/index.html", products=products)
 
-
 def get_product_by_admin(id, check_admin=True):
-    product = get_db().execute(
-        "SELECT p.*"
-        " FROM product p JOIN user u ON p.admin_id = u.id"
-        " WHERE p.id = ?",
-        (id,)
-    ).fetchone()
+    product = Product.query.filter_by(id=id).join(User).filter_by(id=User.id).first()
     if not product:
         abort(404, f"Product id {id} doesn't exist.")
-    if check_admin and product["admin_id"] != g.user["id"]:
+    if check_admin and product.admin_id != g.user.id:
         abort(403)
     return product
 
-
 def get_product_by_id(id):
-    product = get_db().execute(
-        "SELECT p.*"
-        " FROM product p JOIN user u ON p.admin_id = u.id"
-        " WHERE p.id = ?",
-        (id,)
-    ).fetchone()
+    product = Product.query.filter_by(id=id).first()
     if not product:
         abort(404, f"Product id {id} doesn't exist.")
     return product
-
 
 def handle_cart():
     products = []
@@ -71,16 +57,16 @@ def handle_cart():
 
     for product_id, qty in counts.items():
         product = get_product_by_id(id=product_id)
-        qty_total_price = qty * product['price']
+        qty_total_price = qty * product.price # using dot notation instead of square bracket notation
         grand_total += qty_total_price
         products.append(
             {
-                'id': product['id'],
-                'name': product['name'],
-                'price':  product['price'],
+                'id': product.id, # using dot notation instead of square bracket notation
+                'name': product.name,
+                'price':  product.price,
                 'qty':  qty,
                 'qty_total_price': qty_total_price,
-                'image': product['image'],
+                'image': product.image,
                 'index': index
             }
         )
@@ -89,7 +75,6 @@ def handle_cart():
         shipping_fee = 15
     total_charge = grand_total + shipping_fee
     return products, grand_total, shipping_fee, total_charge
-
 
 @bp.route("/add", methods=("GET", "POST"))
 @login_required
@@ -117,11 +102,10 @@ def add_product():
         if error is not None:
             flash(error)
         else:
-            db = get_db()
             try:
-                db.execute("INSERT INTO product (name, price, stock, description, image, admin_id) VALUES (?,?,?,?,?,?)",
-                           (name, price, stock, description, image, g.user["id"]))
-                db.commit()
+                product = Product(name=name, price=price, stock=stock, description=description, image=image, admin_id=g.user.id)
+                db.session.add(product)
+                db.session.commit()
             except Exception as e:
                 flash(f'An error occurred: {e}')
                 return redirect(url_for("store.index"))
@@ -161,7 +145,9 @@ def read(id):
 @bp.route('/<int:id>/update', methods=['GET', 'POST'])
 @login_required
 def update(id):
-    product = get_product_by_admin(id, check_admin=True)
+    product = Product.query.filter_by(id=id).first_or_404()
+    if product.admin_id != g.user.id:
+        abort(403)
 
     if request.method == 'POST':
         name = request.form['name']
@@ -169,8 +155,8 @@ def update(id):
         stock = int(request.form['stock'])
         description = request.form['description']
         image = request.form['image']
-
         error = None
+
 
         if not name:
             error = 'Name is required.'
@@ -180,35 +166,48 @@ def update(id):
             error = 'Stock must be a positive integer.'
         elif not image:
             error = 'Image is required.'
-        elif not re.match(r'^https://.*\.(jpg|jpeg|png)$', image):
-            error = 'Image URL must start with "https://" and end with ".jpg", ".jpeg", or ".png".'
+        elif not re.match(r'^https://', image):
+            error = 'Image URL must start with "https://"'
 
+        print("error: ", error)
         if error is not None:
             flash(error)
         else:
-            db = get_db()
             try:
-                db.execute('UPDATE product SET name = ?, price = ?, stock = ?, description = ?, image = ? WHERE id = ?',
-                           (name, price, stock, description, image, id))
-                db.commit()
+                product.name = name
+                product.price = price
+                product.stock = stock
+                product.description = description
+                product.image = image
+                db.session.commit()
+                print("product updated")
+                print(db.session.commit())
             except Exception as e:
                 flash(f'An error occurred: {e}')
                 return redirect(url_for('store.index'))
 
-            return redirect(url_for('store.index'))
+            flash('Product updated successfully.')
+            return redirect(url_for('store.index', id=product.id))
 
     return render_template('products/update.html', product=product)
 
-
-@bp.route("/<int:id>/delete", methods=("POST",))
+@bp.route('/<int:id>/delete', methods=['POST'])
 @login_required
 def delete(id):
-    get_product_by_admin(id)
-    db = get_db()
-    db.execute("DELETE FROM product WHERE id = ?", (id,))
-    db.commit()
-    return redirect(url_for("store.index"))
+    product = get_product_by_admin(id)
+    if not product:
+        flash('Product not found')
+        return redirect(url_for('store.index'))
 
+    try:
+        db.session.delete(product)
+        db.session.commit()
+        flash('Product deleted successfully')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'An error occurred while deleting the product: {e}')
+
+    return redirect(url_for('store.index'))
 
 @bp.route('/cart/add/<id>')
 @login_required
@@ -270,21 +269,21 @@ def checkout():
         stripe_payment_id = 'None'
 
         if error is None:
-            db = get_db()
-            db.execute(
-                "INSERT INTO orders (buyer_id, shipping_fee, grand_total, first_name, last_name, email, delivery_house_nr, delivery_street, delivery_additional,delivery_state,delivery_postal,delivery_country,instructions, delivery_status, stripe_payment_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
-                    g.user["id"], shipping_fee, grand_total, first_name, last_name, email, delivery_house_nr, delivery_street, delivery_additional, delivery_state, delivery_postal, delivery_country, instructions, status, stripe_payment_id,),
-            )
-            db.commit()
+            try:
+                order = Orders(buyer_id=g.user["id"], shipping_fee=shipping_fee, grand_total=grand_total, first_name=first_name, last_name=last_name, email=email, delivery_house_nr=delivery_house_nr, delivery_street=delivery_street, delivery_additional=delivery_additional,delivery_state=delivery_state,delivery_postal=delivery_postal,delivery_country=delivery_country,instructions=instructions, delivery_status=status, stripe_payment_id=stripe_payment_id)
+                db.session.add(order)
+                db.session.commit()
 
-            # If orders successfully saves, add cart session to order lines using the same Order ID
-            order_id = db.lastrowid
-            for item in session['cart']:
-                db.execute(
-                    "INSERT INTO orderlines (order_id, product_id, quantity) VALUES (?,?,?)", (
-                        order_id, item['id'], item['quantity']),
-                )
-                db.commit()
+                # If orders successfully saves, add cart session to order lines using the same Order ID
+                order_id = order.id
+                for item in session['cart']:
+                    order_line = OrderLine(order_id=order_id, product_id=item['id'], quantity=item['quantity'])
+                    db.session.add(order_line)
+                db.session.commit()
+
+            except Exception as e:
+                flash(f'An error occurred: {e}')
+                return redirect(url_for("store.index"))
 
         # Connect to Stripe api for payment
         return redirect(url_for("store.payment"))
