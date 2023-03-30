@@ -9,14 +9,17 @@ def create_app(config_class=Config):
     db.init_app(app)
 
     with app.app_context():
-        from application.models import store, auth
+        from application.models import User, Product, Orders, OrderLine
         db.create_all()
-
         migrate.init_app(app, db, compare_type=True)
 
-    from application.views import auth, store
-    app.register_blueprint(auth.bp)
-    app.register_blueprint(store.bp)
+    from application.accounts.views import bp as auth
+    from application.products.views import bp as products
+    from application.orders.views import bp as orders
+
+    app.register_blueprint(auth)
+    app.register_blueprint(products)
+    app.register_blueprint(orders)
     app.add_url_rule("/", endpoint="index")
 
     @app.errorhandler(401)
