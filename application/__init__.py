@@ -1,12 +1,9 @@
 from flask import Flask, render_template
-from flask_sqlalchemy import SQLAlchemy
 from config import Config
-
-
-db = SQLAlchemy()
-
+from application.extensions.db import db, migrate
 
 def create_app(config_class=Config):
+
     app = Flask(__name__)
     app.config.from_object(config_class)
     db.init_app(app)
@@ -14,6 +11,8 @@ def create_app(config_class=Config):
     with app.app_context():
         from application.models import store, auth
         db.create_all()
+
+        migrate.init_app(app, db, compare_type=True)
 
     from application.views import auth, store
     app.register_blueprint(auth.bp)
