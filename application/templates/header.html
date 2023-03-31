@@ -8,28 +8,34 @@
                     <p class="text-white">Don't see your favourite things? Join us and become a distributor.</p>
                 </div>
                 <div class="col-sm-4 offset-md-1 py-4">
-                    <h5 class="text-white fst-italic fw-bolder">{% if g.user %}Welcome back, {{ g.user['username'] |
-                        capitalize }}!{% else %} Navigation{% endif %}</h5>
+                    <h5 class="text-white fst-italic fw-bolder">
+                        {% if current_user.is_authenticated %}
+                            Welcome back, {{ current_user.username | capitalize }}!
+                        {% else %}
+                            Navigation
+                        {% endif %}
+                    </h5>
                     <ul class="list-unstyled display-6">
                         <li>
                             <hr class="" style="border-color:white">
                         </li>
-                        {% if g.user.is_admin %}
-                        <li><a href="{{ url_for('store.add_product') }}" class="text-white">Add Product</a></li>
+                        {% if current_user.is_authenticated %}
+
+                        {% if current_user.is_admin %}
+                        <li><a href="{{ url_for('products.add_product') }}" class="text-white">Add Product</a></li>
                         {% endif %}
 
-                        {% if g.user %}
                         <li><a href="{{ url_for('orders.cart') }}" class="text-white">
                                 My Cart</a></li>
                         <li>
                             <hr class="dropdown-divider">
                         </li>
-                        <li><a href="{{ url_for('orders.cart') }}" class="text-white">
+                        <li><a href="{{ url_for('accounts.settings') }}" class="text-white">
                             My Account</a></li>
-                        <li><a href="{{ url_for('auth.logout') }}" class="text-white">Log Out</a></li>
+                        <li><a href="{{ url_for('accounts.logout') }}" class="text-white">Log Out</a></li>
                         {% else %}
-                        <li><a href="{{ url_for('auth.register') }}" class="text-white">Register</a></li>
-                        <li><a href="{{ url_for('auth.login') }}" class="text-white">Log In</a></li>
+                        <li><a href="{{ url_for('accounts.register') }}" class="text-white">Register</a></li>
+                        <li><a href="{{ url_for('accounts.login') }}" class="text-white">Log In</a></li>
                         {% endif %}
 
 

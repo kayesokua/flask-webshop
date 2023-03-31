@@ -1,4 +1,4 @@
-{% extends 'base_auth.html' %}
+{% extends 'base_accounts.html' %}
 
 {% block title %}Register for Account{% endblock %}
 {% block content %}
@@ -8,7 +8,7 @@
 <form method="post">
 
   <h1 class="h2 mb-3 fw-normal">Register Your Account</h1>
-  
+
   {% with messages = get_flashed_messages() %}
   {% if messages %}
     <ul class="flashes text-danger">
@@ -38,10 +38,10 @@
   <hr />
 
   <div class="form-check mb-3">
-    <input class="form-check-input" type="checkbox" value="" id="flexCheckChecked" checked required>
+    <input class="form-check-input" type="checkbox" value="" id="flexCheckChecked">
     <label class="form-check-label" for="flexCheckChecked">
       I agree to our collection, use, and disclosure of your personal information in accordance with the General Data
-      Protection Regulation (GDPR).
+      Protection Regulation (GDPR). If not, I will not be able to make a successful checkout.
       Read more here.
     </label>
   </div>
@@ -53,7 +53,7 @@
 
   <hr />
   <div>
-    Already have an account? <a href="{{ url_for('auth.login')}}"> Log In.</a>
+    Already have an account? <a href="{{ url_for('accounts.login')}}"> Log In.</a>
   </div>
 </form>
 

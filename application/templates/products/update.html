@@ -40,7 +40,7 @@
       <input type="submit" class="w-100 btn btn-outline-danger btn-lg " value="Save" />
     </form>
 
-    <form action="{{ url_for('store.delete', id=product['id']) }}" class="mt-3" method="post">
+    <form action="{{ url_for('products.delete', id=product['id']) }}" class="mt-3" method="post">
       <input class="w-100 btn btn-danger btn-lg" type="submit" value="Delete" onclick="return confirm('Are you sure?');">
     </form>
 
