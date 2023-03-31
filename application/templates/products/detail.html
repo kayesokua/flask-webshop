@@ -31,9 +31,8 @@
       </form>
      
       <p>
-        {% if g.user['id'] == product['admin_id'] %}
-
-        <a href="{{ url_for('store.update', id=product['id']) }}"
+        {% if current_user.id == product['admin_id'] %}
+        <a href="{{ url_for('products.update', id=product['id']) }}"
           class="btn btn-outline-primary btn-lg px-4 me-md-2">Update Product</a>
         {% endif %}
       </p>
