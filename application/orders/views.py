@@ -2,12 +2,12 @@ import stripe
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for, session, jsonify
 from application.extensions.db import db
 from collections import defaultdict
-from application.accounts.views import login_required
-import re
+from flask_login import login_required, current_user
 from collections import defaultdict
 import os
-from application.models import User, Product, Orders, OrderLine
+from application.models import Product, Orders, OrderLine
 from application.products.views import get_product_by_id
+
 
 bp = Blueprint("orders", __name__)
 
@@ -20,7 +20,6 @@ stripe_keys = {
     "endpoint_secret": os.environ["STRIPE_ENDPOINT_SECRET"]
 }
 
-
 @bp.route("/config")
 def get_publishable_key():
     stripe_config = {"publicKey": stripe_keys["publishable_key"]}
@@ -32,70 +31,31 @@ def handle_cart():
     shipping_fee = 0
     index = 0
     total_charge = 0
-    counts = defaultdict(int)
-    for item in session.get('cart', []):
-        counts[int(item['id'])] += item['quantity']
 
-    for product_id, qty in counts.items():
-        product = get_product_by_id(id=product_id)
-        qty_total_price = qty * product.price # using dot notation instead of square bracket notation
-        grand_total += qty_total_price
-        products.append(
-            {
-                'id': product.id, # using dot notation instead of square bracket notation
-                'name': product.name,
-                'price':  product.price,
-                'qty':  qty,
-                'qty_total_price': qty_total_price,
-                'image': product.image,
-                'index': index
-            }
-        )
-        index += 1
-    if grand_total < 99:
-        shipping_fee = 15
+    for item in session['cart']:
+        product = Product.query.filter_by(id=item['id']).first()
+        if product is not None:
+            qty_total_price = item['quantity'] * product.price
+            products.append(
+                {
+                    'index': index,
+                    'id': product.id,
+                    'name': product.name,
+                    'price':  product.price,
+                    'qty':  item['quantity'],
+                    'qty_total_price': qty_total_price,
+                    'image': product.image,
+
+                }
+            )
+            index += 1
+            grand_total += qty_total_price
+
+    if 50 > grand_total:
+        shipping_fee = 5.99
+
     total_charge = grand_total + shipping_fee
     return products, grand_total, shipping_fee, total_charge
-
-
-@bp.route("/add", methods=("GET", "POST"))
-@login_required
-def add_product():
-    if request.method == "POST":
-        name = request.form["name"]
-        price = request.form["price"]
-        stock = request.form["stock"]
-        description = request.form["description"]
-        image = request.form["image"]
-
-        error = None
-
-        if not name:
-            error = 'Name is required.'
-        elif not float(price) or float(price) < 0:
-            error = 'Price must be a positive number.'
-        elif not stock or int(stock) < 0:
-            error = 'Stock must be a positive integer.'
-        elif not image:
-            error = 'Image is required.'
-        elif not re.match(r'^https://', image):
-            error = 'Image URL must start with "https://'
-
-        if error is not None:
-            flash(error)
-        else:
-            try:
-                product = Product(name=name, price=price, stock=stock, description=description, image=image, admin_id=g.user.id)
-                db.session.add(product)
-                db.session.commit()
-            except Exception as e:
-                flash(f'An error occurred: {e}')
-                return redirect(url_for("store.index"))
-
-            return redirect(url_for('store.index'))
-
-    return render_template("products/create.html")
-
 
 @bp.route('/cart/add/<id>')
 @login_required
@@ -115,9 +75,7 @@ def cart_add_item(id):
     else:
         session['cart'] = [{'id': id, 'quantity': 1}]
     session.modified = True
-    print(session['cart'])
     return redirect(url_for('index'))
-
 
 @bp.route('/cart/delete/<index>')
 @login_required
@@ -128,13 +86,11 @@ def cart_remove_item(index):
     session.modified = True
     return redirect("/cart")
 
-
 @bp.route("/cart")
 @login_required
 def cart():
     products, grand_total, shipping_fee, total_payment = handle_cart()
     return render_template('products/cart.html', products=products, grand_total=grand_total, shipping_fee=shipping_fee, total_payment=total_payment)
-
 
 @bp.route('/checkout', methods=['GET', 'POST'])
 @login_required
@@ -171,10 +127,9 @@ def checkout():
 
             except Exception as e:
                 flash(f'An error occurred: {e}')
-                return redirect(url_for("store.index"))
+                return redirect(url_for("products.index"))
 
-        # Connect to Stripe api for payment
-        return redirect(url_for("store.payment"))
+        return redirect(url_for("orders.payment"))
 
     return render_template('products/checkout.html', products=products, grand_total=grand_total, shipping_fee=shipping_fee, total_payment=total_payment, stripe_public_key=stripe_public_key)
 
@@ -227,26 +182,18 @@ def stripe_webhook():
         )
 
     except ValueError as e:
-        # Invalid payload
         return 'Invalid payload', 400
     except stripe.error.SignatureVerificationError as e:
-        # Invalid signature
         return 'Invalid signature', 400
 
-    # Handle the checkout.session.completed event
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
-
-        # Fulfill the purchase...
         handle_checkout_session(session)
 
     return 'Success', 200
 
-
 def handle_checkout_session(session):
     print("Payment was successful.")
-    # TODO: run some custom code here
-
 
 @bp.route("/success")
 def success():

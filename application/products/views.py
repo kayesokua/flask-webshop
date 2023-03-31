@@ -1,24 +1,14 @@
-import stripe
+import re
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for, session, jsonify
 from werkzeug.exceptions import abort
 from application import db
-from collections import defaultdict
-from application.accounts.views import login_required
-import re
-from collections import defaultdict
-import os
 from application.models import User, Product, Orders, OrderLine
+from flask_login import login_required, current_user
 
 from dotenv import load_dotenv
 load_dotenv()
 
 bp = Blueprint("products", __name__)
-
-stripe_keys = {
-    "secret_key": os.environ["STRIPE_SECRET_KEY"],
-    "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"],
-    "endpoint_secret": os.environ["STRIPE_ENDPOINT_SECRET"]
-}
 
 @bp.route("/")
 def index():
@@ -29,7 +19,7 @@ def get_product_by_admin(id, check_admin=True):
     product = Product.query.filter_by(id=id).join(User).filter_by(id=User.id).first()
     if not product:
         abort(404, f"Product id {id} doesn't exist.")
-    if check_admin and product.admin_id != g.user.id:
+    if check_admin and product.admin_id != current_user.id:
         abort(403)
     return product
 
@@ -39,6 +29,43 @@ def get_product_by_id(id):
         abort(404, f"Product id {id} doesn't exist.")
     return product
 
+@bp.route("/add", methods=("GET", "POST"))
+@login_required
+def add_product():
+    if request.method == "POST":
+        name = request.form["name"]
+        price = request.form["price"]
+        stock = request.form["stock"]
+        description = request.form["description"]
+        image = request.form["image"]
+
+        error = None
+
+        if not name:
+            error = 'Name is required.'
+        elif not float(price) or float(price) < 0:
+            error = 'Price must be a positive number.'
+        elif not stock or int(stock) < 0:
+            error = 'Stock must be a positive integer.'
+        elif not image:
+            error = 'Image is required.'
+        elif not re.match(r'^https://', image):
+            error = 'Image URL must start with "https://'
+
+        if error is not None:
+            flash(error)
+        else:
+            try:
+                product = Product(name=name, price=price, stock=stock, description=description, image=image, admin_id=current_user.id)
+                db.session.add(product)
+                db.session.commit()
+            except Exception as e:
+                flash(f'An error occurred: {e}')
+                return redirect(url_for("products.index"))
+
+            return redirect(url_for('products.index'))
+
+    return render_template("products/create.html")
 
 @bp.route('/product/<int:id>/', methods=('GET', 'POST'))
 @login_required
@@ -63,7 +90,6 @@ def read(id):
         else:
             session['cart'] = [{'id': id, 'quantity': quantity}]
         session.modified = True
-
     return render_template('products/detail.html', product=product)
 
 
@@ -71,7 +97,7 @@ def read(id):
 @login_required
 def update(id):
     product = Product.query.filter_by(id=id).first_or_404()
-    if product.admin_id != g.user.id:
+    if current_user.id != product.admin_id:
         abort(403)
 
     if request.method == 'POST':
@@ -94,7 +120,6 @@ def update(id):
         elif not re.match(r'^https://', image):
             error = 'Image URL must start with "https://"'
 
-        print("error: ", error)
         if error is not None:
             flash(error)
         else:
@@ -105,14 +130,12 @@ def update(id):
                 product.description = description
                 product.image = image
                 db.session.commit()
-                print("product updated")
-                print(db.session.commit())
             except Exception as e:
                 flash(f'An error occurred: {e}')
-                return redirect(url_for('store.index'))
+                return redirect(url_for('products.index'))
 
             flash('Product updated successfully.')
-            return redirect(url_for('store.index', id=product.id))
+            return redirect(url_for('products.index', id=product.id))
 
     return render_template('products/update.html', product=product)
 
@@ -122,7 +145,7 @@ def delete(id):
     product = get_product_by_admin(id)
     if not product:
         flash('Product not found')
-        return redirect(url_for('store.index'))
+        return redirect(url_for('products.index'))
 
     try:
         db.session.delete(product)
@@ -132,5 +155,4 @@ def delete(id):
         db.session.rollback()
         flash(f'An error occurred while deleting the product: {e}')
 
-    return redirect(url_for('store.index'))
-
+    return redirect(url_for('products.index'))
