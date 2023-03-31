@@ -1,94 +1,86 @@
-import functools
-
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
-from werkzeug.security import check_password_hash
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from application import db
 from application.models import User
+from flask_login import LoginManager, login_required, login_user, logout_user, current_user
 
-bp = Blueprint("auth", __name__, url_prefix="/auth")
+bp = Blueprint("accounts", __name__, url_prefix="/accounts")
+login_manager = LoginManager()
 
-def login_required(view):
-    """View decorator that redirects anonymous users to the login page."""
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
-    @functools.wraps(view)
-    def wrapped_view(**kwargs):
-        if g.user is None:
-            return redirect(url_for("auth.login"))
-
-        return view(**kwargs)
-
-    return wrapped_view
-
-
-@bp.before_app_request
-def load_logged_in_user():
-    """If a user id is stored in the session, load the user object from
-    the database into ``g.user``."""
-    user_id = session.get("user_id")
-
-    if user_id is None:
-        g.user = None
-    else:
-        g.user = User.query.filter_by(id=user_id).first()
-
+@login_manager.unauthorized_handler
+def unauthorized():
+    flash("You must be logged in to view that page.")
+    return redirect(url_for("accounts.login"))
 
 @bp.route("/register", methods=["GET", "POST"])
 def register():
-    username = ""
+    if current_user.is_authenticated:
+        return redirect(url_for("accounts.settings"))
+    else:
+        username = ""
 
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-        password2 = request.form["password2"]
+        if request.method == "POST":
+            username = request.form["username"]
+            password = request.form["password"]
+            password2 = request.form["password2"]
 
-        error = None
-        user = User.query.filter_by(username=username).first()
+            error = None
+            user = User.query.filter_by(username=username).first()
 
-        if user is not None:
-            error = "Username " + username + " already exists."
-        elif password != password2:
-            error = "Passwords do not match."
+            if user is not None:
+                error = "Username " + username + " already exists."
+            elif password != password2:
+                error = "Passwords do not match."
 
-        if error is None:
-            # The username and password are valid, so we can insert the user into the database.
-            user = User(username=username, password=generate_password_hash(password))
-            db.session.add(user)
-            db.session.commit()
-            return redirect(url_for("auth.login"))
+            if error is None:
+                # The username and password are valid, so we can insert the user into the database.
+                user = User(username=username, password=generate_password_hash(password))
+                db.session.add(user)
+                db.session.commit()
+                login_user(user)
+                return redirect(url_for("index"))
 
-        flash(error)
+            flash(error)
 
-    return render_template("auth/register.html", username=username)
+        return render_template("accounts/register.html", username=username)
 
-@bp.route("/login", methods=("GET", "POST"))
+@bp.route("/login", methods=["GET", "POST"])
 def login():
-    """Log in a registered user by adding the user id to the session."""
-    username = ""
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-
-        error = None
-        user = User.query.filter_by(username=username).first()
-
-        if user is None:
-            error = "Incorrect username."
-        elif not check_password_hash(user.password, password):
-            error = "Incorrect password."
-
-        if error is None:
-            # store the user id in a new session and return to the index
-            session.clear()
-            session["user_id"] = user.id
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+    else:
+        if request.method == "POST":
+            username = request.form["username"]
+            password = request.form["password"]
+            user = User.query.filter_by(username=username).first()
+            if not user or not check_password_hash(user.password, password):
+                flash('Please check your login details and try again.')
+                return redirect(url_for('accounts.login')) # if user doesn't exist or password is wrong, reload the page
+            login_user(user)
             return redirect(url_for("index"))
-
-        flash(error)
-
-    return render_template("auth/login.html",username=username)
+        return render_template("accounts/login.html")
 
 @bp.route("/logout")
+@login_required
 def logout():
     """Clear the current session, including the stored user id."""
-    session.clear()
+    logout_user()
     return redirect(url_for("index"))
+
+@bp.route("/settings")
+@login_required
+def settings():
+    return render_template("accounts/settings.html")
+
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.query(User).get(int(user_id))
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    flash("You must be logged in to view that page.")
+    return redirect(url_for("accounts.login"))
