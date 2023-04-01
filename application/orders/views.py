@@ -6,8 +6,8 @@ from flask_login import login_required, current_user
 from collections import defaultdict
 import os
 from application.models import Product, Orders, OrderLine
-from application.products.views import get_product_by_id
-
+from application.orders.forms import OrderStatusForm, CheckoutForm
+from application.models.accounts import DeliveryAddress
 
 bp = Blueprint("orders", __name__)
 
@@ -42,6 +42,7 @@ def handle_cart():
                     'id': product.id,
                     'name': product.name,
                     'price':  product.price,
+                    'stock': product.stock,
                     'qty':  item['quantity'],
                     'qty_total_price': qty_total_price,
                     'image': product.image,
@@ -75,7 +76,7 @@ def cart_add_item(id):
     else:
         session['cart'] = [{'id': id, 'quantity': 1}]
     session.modified = True
-    return redirect(url_for('index'))
+    return redirect(url_for('products.index'))
 
 @bp.route('/cart/delete/<index>')
 @login_required
@@ -90,53 +91,46 @@ def cart_remove_item(index):
 @login_required
 def cart():
     products, grand_total, shipping_fee, total_payment = handle_cart()
-    return render_template('products/cart.html', products=products, grand_total=grand_total, shipping_fee=shipping_fee, total_payment=total_payment)
+    return render_template('orders/cart.html', products=products, grand_total=grand_total, shipping_fee=shipping_fee, total_payment=total_payment)
 
-@bp.route('/checkout', methods=['GET', 'POST'])
+
+@bp.route('/cart/checkout', methods=['GET', 'POST'])
 @login_required
 def checkout():
+    form = CheckoutForm()
     products, grand_total, shipping_fee, total_payment = handle_cart()
-    error = None
-    stripe_public_key = os.environ.get('STRIPE_PUBLISHABLE_KEY')
-    if request.method == 'POST':
-        first_name = request.form['first_name']
-        last_name = request.form['last_name']
-        email = request.form['email']
-        delivery_house_nr = request.form['delivery_house_nr']
-        delivery_street = request.form['delivery_street']
-        delivery_additional = request.form['delivery_additional']
-        delivery_state = request.form['delivery_state']
-        delivery_postal = request.form['delivery_postal']
-        delivery_country = request.form['delivery_country']
-        instructions = request.form['instructions']
-        delivery_status = 'CHECKOUT'
-        stripe_payment_id = 'None'
 
-        if error is None:
-            try:
-                order = Orders(buyer_id=g.user["id"], shipping_fee=shipping_fee, grand_total=grand_total, first_name=first_name, last_name=last_name, email=email, delivery_house_nr=delivery_house_nr, delivery_street=delivery_street, delivery_additional=delivery_additional,delivery_state=delivery_state,delivery_postal=delivery_postal,delivery_country=delivery_country,instructions=instructions, delivery_status=status, stripe_payment_id=stripe_payment_id)
-                db.session.add(order)
-                db.session.commit()
+    if form.validate_on_submit():
+        selected_address_id = int(form.selected_address.data)
+        new_order = Orders(
+            address_id=selected_address_id,
+            buyer_id=current_user.id,
+            shipping_fee=shipping_fee,
+            grand_total=total_payment)
 
-                # If orders successfully saves, add cart session to order lines using the same Order ID
-                order_id = order.id
-                for item in session['cart']:
-                    order_line = OrderLine(order_id=order_id, product_id=item['id'], quantity=item['quantity'])
-                    db.session.add(order_line)
-                db.session.commit()
+        db.session.add(new_order)
+        db.session.commit()
 
-            except Exception as e:
-                flash(f'An error occurred: {e}')
-                return redirect(url_for("products.index"))
+        for product in products:
+            print(product)
+            order_line = OrderLine(order_id=new_order.id, product_id=product['id'], quantity=product['qty'], total_price=product['qty_total_price'])
+            db.session.add(order_line)
+            db.session.commit()
 
-        return redirect(url_for("orders.payment"))
+        product_update_stock = Product.query.filter_by(id=product['id']).first()
+        product_update_stock.stock =  product_update_stock.stock - product['qty']
+        db.session.commit()
 
-    return render_template('products/checkout.html', products=products, grand_total=grand_total, shipping_fee=shipping_fee, total_payment=total_payment, stripe_public_key=stripe_public_key)
+        session['cart'].pop()
 
+        flash('Your order has been created successfully.')
+        return redirect(url_for('accounts.settings'))
+
+    return render_template('orders/checkout.html', products=products, grand_total=grand_total, shipping_fee=shipping_fee, total_payment=total_payment, form=form)
 
 stripe.api_key = stripe_keys["secret_key"]
 
-@bp.route("/create-checkout-session", methods=["GET", "POST"])
+@bp.route("/cart/create-checkout-session", methods=["GET", "POST"])
 def create_checkout_session():
     domain_url = "https://127.0.0.1:8000/"
     stripe.api_key = stripe_keys["secret_key"]

@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+
+<div class="container row">
+
+  <div class="col-md-6 col-lg-6">
+    <div class="mt-5 mb-3">
+      <h2 class="display-5">{{ title }}</h2>
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      {% for message in messages %}
+      <div class="alert alert-warning" role="alert">
+
+        {{ message }}
+
+      </div>
+      {% endfor %}
+      {% endif %}
+      {% endwith %}
+    </div>
+
+    <form method="POST">
+      {{ form.csrf_token }}
+
+      <div class="row">
+
+        <div class="col-12 mt-3">
+          <label for="first_name" class="form-label fw-light font-size-lg">Recipient's Contact Information</label>
+        </div>
+        <div class="col-6 mb-3">
+          {{ form.first_name(class="form-control") }}
+          {% for error in form.first_name.errors %}
+          <p class="small text-danger">{{ error }}</p>
+          {% endfor %}
+        </div>
+        <div class="col-6 mb-3">
+          {{ form.last_name(class="form-control") }}
+          {% for error in form.first_name.errors %}
+          <p class="small text-danger">{{ error }}</p>
+          {% endfor %}
+        </div>
+        <div class="col-12 mb-3">
+          {{ form.email(class="form-control") }}
+          {% for error in form.email.errors %}
+          <p class="small text-danger">{{ error }}</p>
+          {% endfor %}
+        </div>
+        <div class="col-12 mt-3">
+          <label for="address" class="form-label fw-light font-size-lg">Recipient's Address Information</label>
+        </div>
+        <div class="col-4">
+          {{ form.delivery_house_nr(class="form-control") }}
+          {% for error in form.delivery_house_nr.errors %}
+          <p class="small text-danger">{{ error }}</p>
+          {% endfor %}
+        </div>
+        <div class="col-8">
+          {{ form.delivery_street(class="form-control") }}
+          {% for error in form.delivery_street.errors %}
+          <p class="small text-danger">{{ error }}</p>
+          {% endfor %}
+
+        </div>
+        <div class="col-12 mt-3">
+          {{ form.delivery_additional(class="form-control") }}
+          {% for error in form.delivery_additional.errors %}
+          <p class="small text-danger">{{ error }}</p>
+          {% endfor %}
+        </div>
+        <div class="col-4 mt-3">
+          {{ form.delivery_postal(class="form-control") }}
+          {% for error in form.delivery_postal.errors %}
+          <p class="small text-danger">{{ error }}</p>
+          {% endfor %}
+        </div>
+        <div class="col-4 mt-3">
+          {{ form.delivery_state(class="form-control") }}
+          {% for error in form.delivery_state.errors %}
+          <p class="small text-danger">{{ error }}</p>
+          {% endfor %}
+        </div>
+        <div class="col-4 mt-3">
+          {{ form.delivery_country(class="form-control") }}
+          {% for error in form.delivery_country.errors %}
+          <p class="small text-danger">{{ error }}</p>
+          {% endfor %}
+        </div>
+
+        <div class="col-12 mt-3">
+          {{ form.instructions.label(class="form-label fw-light font-size-lg") }}
+          {{ form.instructions(class="form-control") }}
+          {% for error in form.instructions.errors %}
+          <p class="small text-danger">{{ error }}</p>
+          {% endfor %}
+        </div>
+        <div class="col-12 mt-3">
+          {{ form.submit(class="btn btn-lg btn-danger w-100 mt-3 mb-3") }}
+        </div>
+    </form>
+    {% if title=='Update Address' %}
+    <form action="{{ url_for('accounts.delete_address') }}" method="post">
+      <input type="hidden" name="address_id" value="{{ address_id }}">
+      <input class="w-100 btn btn-outline-danger btn-lg" type="submit" value="Delete" onclick="return confirm('Are you sure?');">
+    </form>
+    {% endif %}
+
+  </div>
+</div>
+  <div class="col-md-3 col-lg-4">
+    <div class="mt-5 mb-3">
+      <h4 class="d-flex justify-content-between align-items-center mb-3">
+        <span class="text-danger">My Addresses</span>
+        <span class="badge bg-danger rounded-pill">{{ addresses | length }}</span>
+      </h4>
+      {% if addresses %}
+      <ul class="list-group mb-3">
+        {% for address in addresses %}
+        <li class="list-group-item d-flex justify-content-between lh-sm">
+          <div>
+            <h6 class="my-0">
+              <a href="{{ url_for('accounts.update_address', address_id=address.id) }}" class="text-decoration-none text-danger">
+                {{ address.delivery_country }}, {{ address.delivery_state }} {{ address.delivery_postal }}
+              </a>
+            </h6>
+            <small class="text-muted">{{ address.delivery_house_nr }} {{ address.delivery_street }}</small>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      <div>
+        <a href="{{ url_for('accounts.create_address') }}" class="btn btn-outline-danger w-100">Add Address</a>
+       </div>
+      {% else %}
+      <ul class="list-group mb-3">
+        <li class="list-group-item d-flex justify-content-between lh-sm">
+          <div>
+            <h6 class="my-0">No Address</h6>
+            <small class="text-muted">Please add an address</small>
+          </div>
+        </li>
+      </ul>
+      {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}

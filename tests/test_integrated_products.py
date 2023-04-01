@@ -56,12 +56,18 @@ def test_index_by_seller(client_seller):
         assert (mock_seller.username).capitalize() in response.get_data(as_text=True)
         assert "Add Product" in response.get_data(as_text=True)
 
-def test_read_product_incorrect_id(client):
+def test_read_product_incorrect_id(client_buyer):
     """
     Tests that a product with an incorrect id returns a 404 error.
     """
-    response = client.get('/products/999')
-    assert response.status_code == 404
+    client, mock_buyer, mock_seller = client_buyer
+    with client.application.test_request_context():
+        db.session.add(mock_buyer)
+        db.session.commit()
+        login_user(mock_buyer)
+        client.get('/')
+        response = client.get('/products/999/')
+        assert response.status_code == 404
 
 def test_read_product_by_buyer(client_buyer):
     """
@@ -82,7 +88,7 @@ def test_read_product_by_buyer(client_buyer):
 
         login_user(mock_buyer)
 
-        response = client.get('/product/1/')
+        response = client.get('/products/1/')
         assert response.status_code == 200
         assert mock_product1.name in response.get_data(as_text=True)
         assert "Update Product" not in response.get_data(as_text=True)
@@ -103,7 +109,7 @@ def test_read_product_by_seller(client_seller):
         db.session.add(mock_product1)
         db.session.commit()
 
-        response = client.get('/product/1/')
+        response = client.get('/products/1/')
         assert response.status_code == 200
         assert mock_product1.name in response.get_data(as_text=True)
         assert "Update Product" in response.get_data(as_text=True)
@@ -124,7 +130,7 @@ def test_update_product_by_seller(client_seller):
         db.session.add(mock_product1)
         db.session.commit()
 
-        client.post('/1/update',
+        client.post('products/1/update',
         data={
             'name': 'Updated Mock Product',
             'price': 10.99,
@@ -132,7 +138,7 @@ def test_update_product_by_seller(client_seller):
             'description': 'This is a first mock product to be updated.',
             'image': 'https://example.com/image_update.png'}
         )
-        response = client.get('/product/1/')
+        response = client.get('/products/1/')
         assert response.status_code == 200
         assert "Updated Mock Product" in response.get_data(as_text=True)
         assert "This is a first mock product to be updated." in response.get_data(as_text=True)
@@ -159,11 +165,10 @@ def test_delete_product_by_seller(client_seller):
         mock_product2 = Product(admin_id=current_user.id, name='Mock Product 2', price=9.99, stock=40, description='This is a second mock product.', image='https://example.com/image2.png',)
         db.session.add(mock_product2)
         db.session.commit()
-
-        client.post('/2/delete')
+        client.get('products/2/update')
+        client.post('products/delete', data={'product_id': 2})
         response = client.get('/')
-
         assert response.status_code == 200
         assert mock_product1.name in response.get_data(as_text=True)
         assert mock_product2.name not in response.get_data(as_text=True)
-        assert client.get('/product/2').status_code == 308
+        assert client.get('/product/2').status_code == 404

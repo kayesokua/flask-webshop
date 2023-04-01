@@ -17,7 +17,7 @@
           <span class="input-group-text">€</span>
           <span class="input-group-text">{{ product['price'] }} x </span>
 
-          <input type="number" name="quantity" id="quantity" class="form-control" aria-label="No. of Stock">
+          <input type="number" name="quantity" id="quantity" class="form-control" min="1" max="{{ product.stock }}" required value="1">
 
           <button type="submit" class="btn btn-primary btn-lg px-4 me-md-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
@@ -31,8 +31,8 @@
       </form>
      
       <p>
-        {% if current_user.id == product['admin_id'] %}
-        <a href="{{ url_for('products.update', id=product['id']) }}"
+        {% if current_user.id == product['admin_id'] and current_user.is_admin %}
+        <a href="{{ url_for('products.update_product', id=product['id']) }}"
           class="btn btn-outline-primary btn-lg px-4 me-md-2">Update Product</a>
         {% endif %}
       </p>
@@ -49,51 +49,25 @@
   </div>
 </section>
 
-<div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+{% if recommendations %}
+
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4">
+  {% for item in recommendations %}
   <div class="col">
     <div class="card shadow-sm">
-      <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false"><title>Placeholder</title><rect width="100%" height="100%" fill="#55595c"></rect><text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text></svg>
+      <img src="{{ item.image }}" class="bd-placeholder-img" height="200" role="img" aria-label="Placeholder: Thumbnail" />
       <div class="card-body">
-        <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
+        <p class="card-text"><a href="{{ url_for('products.read_product', id=item.id) }}">{{ item.name }}</a> </p>
         <div class="d-flex justify-content-between align-items-center">
           <div class="btn-group">
-            <button type="button" class="btn btn-sm btn-outline-secondary">Quick Add</button>
+            <a href="{{ url_for('orders.cart_add_item', id=item.id) }}" class="btn btn-sm btn-outline-secondary">Quick Add</a>
           </div>
           <small class="text-muted">Low Stock</small>
         </div>
       </div>
     </div>
   </div>
-  <div class="col">
-    <div class="card shadow-sm">
-      <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false"><title>Placeholder</title><rect width="100%" height="100%" fill="#55595c"></rect><text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text></svg>
-      <div class="card-body">
-        <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="btn-group">
-            <button type="button" class="btn btn-sm btn-outline-secondary">Quick Add</button>
-          </div>
-          <small class="text-muted">New</small>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col">
-    <div class="card shadow-sm">
-      <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false"><title>Placeholder</title><rect width="100%" height="100%" fill="#55595c"></rect><text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text></svg>
-      <div class="card-body">
-        <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="btn-group">
-            <button type="button" class="btn btn-sm btn-outline-secondary">Quick Add</button>
-          </div>
-          <small class="text-muted">New</small>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-  
+  {% endfor %}
+{% endif %}
 </div>
 {% endblock %}

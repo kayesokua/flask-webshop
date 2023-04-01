@@ -22,7 +22,7 @@
                         {% if current_user.is_authenticated %}
 
                         {% if current_user.is_admin %}
-                        <li><a href="{{ url_for('products.add_product') }}" class="text-white">Add Product</a></li>
+                        <li><a href="{{ url_for('products.create_product') }}" class="text-white">Add Product</a></li>
                         {% endif %}
 
                         <li><a href="{{ url_for('orders.cart') }}" class="text-white">
@@ -46,7 +46,7 @@
     </div>
     <div class="navbar navbar-dark bg-danger shadow-sm">
         <div class="container">
-            <a href="{{ url_for('index') }}" class="navbar-brand d-flex align-items-center">
+            <a href="{{ url_for('products.index') }}" class="navbar-brand d-flex align-items-center">
 
                 <strong>Your Webshop <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                         class="bi bi-clock-fill" viewBox="0 0 16 16">

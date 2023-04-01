@@ -1,7 +1,8 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, redirect, url_for, request, session, flash, abort
 from flask_login import LoginManager
 from config import DevelopmentConfig
 from application.extensions.db import db, migrate
+from application.products.views import index
 
 def create_app(config_class=DevelopmentConfig):
 
@@ -21,7 +22,7 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(accounts)
     app.register_blueprint(products)
     app.register_blueprint(orders)
-    app.add_url_rule("/", endpoint="index")
+    app.add_url_rule("/", endpoint='products.index')
 
     login_manager = LoginManager()
     login_manager.login_view = 'accounts.login'
@@ -30,6 +31,8 @@ def create_app(config_class=DevelopmentConfig):
     def load_user(user_id):
         # since the user_id is just the primary key of our user table, use it in the query for the user
         return User.query.get(int(user_id))
+
+
 
     @app.errorhandler(401)
     def unauthorized_page(error):
