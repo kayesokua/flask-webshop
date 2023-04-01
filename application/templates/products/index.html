@@ -15,13 +15,23 @@
   </div>
 </section>
 
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<ul class="flashes text-danger">
+  {% for message in messages %}
+  <li>{{ message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endwith %}
+
 <div class="row mb-2">
   {% if products %}
   {% for product in products %}
   <div class="col-md-6" style="padding-top: 1.5em ">
     <div class="row g-0 border rounded overflow-hidden flex-md-row shadow-sm h-md-250 position-relative">
       <div class="col-auto d-none d-lg-block">
-        <a href="{{ url_for('products.read', id=product['id']) }}">
+        <a href="{{ url_for('products.read_product', id=product['id']) }}">
           <img src="{{ product['image'] }}" class="bd-placeholder-img" width="300" height="300" role="img" aria-label="Placeholder: Thumbnail" />
         </a>
       </div>
@@ -29,7 +39,7 @@
       <div class="col p-4 d-flex flex-column position-static">
         <strong class="d-inline-block mb-2 text-primary">Delivery 1-2 Days</strong>
         <h3 class="mb-0">
-          <a href="{{ url_for('products.read', id=product['id']) }}" style="z-index: 99;">{{ product['name'] }}</a>
+          <a href="{{ url_for('products.read_product', id=product['id']) }}" style="z-index: 99;">{{ product['name'] }}</a>
         </h3>
 
         <div class="mb-1 text-muted">Available Stock: {{ product['stock'] }}, € {{ product['price'] }} per Qty</div>

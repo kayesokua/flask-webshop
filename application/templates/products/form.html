@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Product Item{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="py-5">
+    <h2 class="display-5">{{ title }}</h2>
+  </div>
+  <div class="col-md-6 col-lg-6">
+    <form method="post">
+      {{ form.csrf_token}}
+      <div class="col-12 mt-3 mb-3">
+        {{ form.name.label(class="form-label fw-light font-size-lg")}}
+        {{ form.name(class="form-control") }}
+        {% for error in form.name.errors %}
+        <p class="small text-danger">{% if error %}{{ form.name.label }}: {{ error }}{% endif %}</p>
+        {% endfor %}
+      </div>
+      <div class="row g-3 mt-3 mb-3">
+        <div class="col-sm-6">
+          {{ form.price.label(class="form-label fw-light font-size-lg")}}
+          {{ form.price(class="form-control") }}
+          {% for error in form.price.errors %}
+          <p class="small text-danger">{{ error }}</p>
+          {% endfor %}
+        </div>
+        <div class="col-sm-6 mt-3 mb-3">
+          {{ form.stock.label(class="form-label fw-light font-size-lg")}}
+          {{ form.stock(class="form-control") }}
+          {% for error in form.stock.errors %}
+          <p class="small text-danger">{% if error %}{{ form.stock.label }}: {{ error }}{% endif %}</p>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="col-12 mt-3 mb-3">
+        {{ form.image.label(class="form-label fw-light font-size-lg")}}
+        {{ form.image(class="form-control") }}
+        {% for error in form.image.errors %}
+        <p class="small text-danger">{{ error }}</p>
+        {% endfor %}
+      </div>
+      <div class="col-12">
+        {{ form.description.label(class="form-label fw-light font-size-lg")}}
+        {{ form.description(class="form-control") }}
+        {% for error in form.description.errors %}
+        <p class="small text-danger">{{ error }}</p>
+        {% endfor %}
+      </div>
+      <hr class="my-4">
+      <input type="submit" class="w-100 btn btn-outline-danger btn-lg" value="Submit" />
+    </form>
+    {% if title=='Update Product' %}
+    <form action="{{ url_for('products.delete_product') }}" class="mt-3" method="post">
+      <input type="hidden" name="product_id" value="{{ product.id }}">
+      <input class="w-100 btn btn-danger btn-lg" type="submit" value="Delete" onclick="return confirm('Are you sure?');">
+    </form>
+    {% endif %}
+  </div>
+</div>
+</div>
+
+{% endblock %}
