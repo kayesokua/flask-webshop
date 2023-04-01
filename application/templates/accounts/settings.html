@@ -1,17 +1,174 @@
 {% extends "base.html" %}
-{% block title %}500{% endblock %}
+{% block title %}Account Settings{% endblock %}
 {% block content %}
 
-<section class="py-5 text-center container">
-    <div class="row py-lg-5">
-        <div class="col-lg-6 col-md-8 mx-auto">
-            <h1 class="display-1">My Account</h1>
-            <h2>Update Account Settings</h2>
 
-            <h2>My Buyer Profile</h2>
-            <h2>My Seller Profile</h2>
+<div class="container row">
+
+    <div class="col-md-6 col-lg-6">
+        <div class="mt-5 mb-3">
+            <h2 class="display-5">{{ title }}</h2>
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-warning" role="alert">
+
+                {{ message }}
+
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+
+
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-3 col-lg-4">
+        <div class="mt-5 mb-3">
+
+            {% if current_user.is_admin %}
+            <h4 class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-danger">Account Profile</span>
+            </h4>
+            <p class="form-label fw-light font-size-lg">Change Password</p>
+            <p class="form-label fw-light font-size-lg">Change 2FA Settings</p>
+
+
+            {% else %}
+            <h4 class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-danger">Account Profile</span>
+            </h4>
+            <p class="form-label fw-light font-size-lg">Upgrade to Seller</p>
+            <p>Looking to start selling your products? Join our platform as a seller and reach a wider audience. Contact
+                our team today to get started.</p>
+            <p class="form-label fw-light font-size-lg">Change Password</p>
+            <p>Change your password.</p>
+
+            {% endif %}
+            <hr />
+            <h4 class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-danger">My Address Book</span>
+            </h4>
+            {% if addresses %}
+            <ul class="list-group mb-3">
+                {% for address in addresses %}
+                <li class="list-group-item d-flex justify-content-between lh-sm">
+                    <div>
+                        <h6 class="my-0">
+                            <a href="{{ url_for('accounts.update_address', address_id=address.id) }}"
+                                class="text-decoration-none text-danger">
+                                {{ address.delivery_country }}, {{ address.delivery_state }} {{ address.delivery_postal
+                                }}
+                            </a>
+                        </h6>
+                        <small class="text-muted">{{ address.delivery_house_nr }} {{ address.delivery_street }}</small>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <ul class="list-group mb-3">
+                <li class="list-group-item d-flex justify-content-between lh-sm">
+                    <div>
+                        <h6 class="my-0">No Address</h6>
+                        <small class="text-muted">Please add an address</small>
+                    </div>
+                </li>
+            </ul>
+            {% endif %}
+            <p class="form-label fw-light font-size-lg"><a href="{{ url_for('accounts.create_address') }}">Add Address</a></p>
+
         </div>
     </div>
-</section>
+    <div class="col-md-3 col-lg-4">
+        <div class="mt-5 mb-3">
+            <h4 class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-danger">Order History</span>
+                <span class="badge bg-danger rounded-pill">{{ total_orders }}</span>
+            </h4>
+            {% if orders %}
+            <ul class="list-group mb-3">
+                {% for order in orders %}
+                <li class="list-group-item d-flex justify-content-between lh-sm">
+                    <div>
+                        <h6 class="my-0">
+                            <a href="#"
+                                class="text-decoration-none text-danger">
+                                Order No. {{ order.id }}-{{ order.time_created.strftime('%Y%m%d') }}
+                            </a>
+                        </h6>
+                        <small class="text-muted">Status: {{ order.delivery_status }}</small>
+
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            <div>
+                <a href="{{ url_for('products.index') }}" class="btn btn-outline-danger w-100">See All Orders</a>
+            </div>
+            {% else %}
+            <ul class="list-group mb-3">
+                <li class="list-group-item d-flex justify-content-between lh-sm">
+                    <div>
+                        <h6 class="my-0">No Orders</h6>
+                        <small class="text-muted">No purchases yet.</small>
+                    </div>
+                </li>
+            </ul>
+            <div>
+                <a href="{{ url_for('products.index') }}" class="btn btn-outline-danger w-100">Start Shopping</a>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+    <div class="col-md-3 col-lg-4">
+        <div class="mt-5 mb-3">
+            <h4 class="d-flex justify-content-between align-items-center mt-3 mb-3">
+                <span class="text-danger">Active Products</span>
+                <span class="badge bg-danger rounded-pill">{{ total_products }}</span>
+            </h4>
+            {% if products %}
+            <ul class="list-group mb-3">
+                {% for product in products %}
+                <li class="list-group-item d-flex justify-content-between lh-sm">
+                    <div>
+                        <h6 class="my-0">
+                            <a href="{{ url_for('products.update_product', id=product['id']) }}"
+                                class="text-decoration-none text-danger">
+                                {{ product.name }}
+                            </a>
+                        </h6>
+                        <small class="text-muted">{{ product.description }}</small>
+                        <small class="text-muted">€ {{ product.price }}, {{ product.stock }}</small>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            <div>
+                <a href="{{ url_for('products.index') }}" class="btn btn-outline-danger w-100">Start Shopping</a>
+            </div>
+            {% else %}
+            <ul class="list-group mb-3">
+                <li class="list-group-item d-flex justify-content-between lh-sm">
+                    <div>
+                        <h6 class="my-0">No Products</h6>
+                        <small class="text-muted">No purchases yet.</small>
+                    </div>
+                </li>
+            </ul>
+            <div>
+                <a href="{{ url_for('products.create_product') }}" class="btn btn-outline-danger w-100">Add Product</a>
+            </div>
+            {% endif %}
+
+
+        </div>
+
+    </div>
+</div>
+
 
 {% endblock %}
