@@ -1,0 +1,58 @@
+{% extends 'base_accounts.html' %}
+
+{% block title %}Register for Account{% endblock %}
+{% block content %}
+
+
+
+<form method="post">
+  {{ form.csrf_token }}
+
+  <h1 class="h2 mb-3 fw-normal">Register Your Account</h1>
+
+  <ul class="flashes text-danger">
+    {% for error in form.username.errors %}
+    <li>{{ error }}</li>
+    {% endfor %}
+    {% for error in form.password.errors %}
+    <li>{{ error }}</li>
+    {% endfor %}
+    {% for error in form.password2.errors %}
+    <li>{{ error }}</li>
+    {% endfor %}
+</ul>
+  <div class="form-floating mb-3">
+    {{ form.username(class="form-control") }}
+    {{ form.username.label }}
+  </div>
+
+  <div class="form-floating mb-3">
+    {{ form.password(class="form-control") }}
+    {{ form.password.label }}
+  </div>
+
+  <div class="form-floating mb-3">
+    {{ form.password2(class="form-control") }}
+    {{ form.password2.label }}
+  </div>
+
+
+  <hr />
+
+  <div class="form-check mb-3">
+    {{ form.accept_tos(class="form-check-input") }}
+    {{ form.accept_tos.label(class="form-check-label") }}
+  </div>
+
+  <div class="d-grid gap-2">
+    {{ form.submit(class="btn btn-danger") }}
+  </div>
+
+
+  <hr />
+  <div>
+    Already have an account? <a href="{{ url_for('accounts.login')}}"> Log In.</a>
+  </div>
+</form>
+
+{% endblock %}

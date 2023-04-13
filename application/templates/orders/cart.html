@@ -26,10 +26,10 @@
 
       <div class="col p-4 d-flex flex-column position-static">
         <strong class="d-inline-block mb-2 text-primary">Delivery 1-2 Days</strong>
-        <h3 class="mb-0"><a href="{{ url_for('products.read', id=product['id']) }}">{{ product['name'] }}</a></h3>
+        <h3 class="mb-0"><a href="{{ url_for('products.read_product', id=product['id']) }}">{{ product['name'] }}</a></h3>
         <p class="card-text mb-auto">€ {{ product.price }} x {{ product.qty }} = € {{ product.qty_total_price }}</p>
 
-        <a href="{{ url_for('orders.cart_remove_item', index=product['index']) }}">Remove 1 Qty</a>
+        <a href="{{ url_for('orders.cart_remove_item', index=product['index']) }}">Remove Product</a>
 
       </div>
 

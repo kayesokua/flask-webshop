@@ -1,33 +1,34 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from application import db
 
 class Orders(db.Model):
     __tablename__ = 'orders'
     id = Column(Integer, primary_key=True, autoincrement=True)
+    address_id = Column(Integer, ForeignKey('addresses.id'), nullable=False)
     buyer_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     shipping_fee = Column(Float, nullable=False)
     grand_total = Column(Float, nullable=False)
-    first_name = Column(String(255), nullable=False)
-    last_name = Column(String(255), nullable=False)
-    email = Column(String(255), nullable=False)
-    delivery_house_nr = Column(String(10), nullable=False)
-    delivery_street = Column(String(50), nullable=False)
-    delivery_additional = Column(String(255))
-    delivery_state = Column(String(50), nullable=False)
-    delivery_postal = Column(String(10), nullable=False)
-    delivery_country = Column(String(2), nullable=False)
-    instructions = Column(String(255))
-    delivery_status = Column(String(10), nullable=False)
-    stripe_payment_id = Column(String(255))
+
+    delivery_status = Column(String(10), default='pending', nullable=True)
+    delivery_tracking_url = Column(String(350), nullable=True)
+
+    payment_status = Column(String(10), default='pending', nullable=True)
+    stripe_payment_id = Column(String(255), nullable=True)
+    stripe_payment_url = Column(String(350), nullable=True)
+
+    time_created = Column(DateTime(timezone=True), server_default=func.now())
+    time_updated = Column(DateTime(timezone=True), onupdate=func.now())
 
     buyer = relationship('User', backref='orders')
+    address = relationship('DeliveryAddress', foreign_keys=[address_id], backref='orders')
     order_lines = relationship('OrderLine', backref='order')
 
 class OrderLine(db.Model):
     __tablename__ = 'order_line'
     order_id = Column(Integer, ForeignKey('orders.id'), primary_key=True)
-    buyer_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
-    qty = Column(Integer, nullable=False)
-    qty_total_price = Column(Float, nullable=False)
-    buyer = relationship('User', backref='order_lines')
+    product_id = Column(Integer, ForeignKey('products.id'), primary_key=True)
+    quantity = Column(Integer, nullable=False)
+    total_price = Column(Float, nullable=False)
+    product = relationship('Product')

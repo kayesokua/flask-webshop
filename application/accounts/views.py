@@ -1,94 +1,157 @@
-import functools
-
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
-from werkzeug.security import check_password_hash
-from werkzeug.security import generate_password_hash
+from flask_login import LoginManager, login_required, login_user, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 from application import db
-from application.models import User
+from application.models.accounts import User, DeliveryAddress
+from application.models.products import Product
+from application.models.orders import Orders, OrderLine
+from .forms import LoginForm, RegisterForm, DeliveryForm
 
-bp = Blueprint("auth", __name__, url_prefix="/auth")
+bp = Blueprint("accounts", __name__, url_prefix="/accounts")
+login_manager = LoginManager()
 
-def login_required(view):
-    """View decorator that redirects anonymous users to the login page."""
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
-    @functools.wraps(view)
-    def wrapped_view(**kwargs):
-        if g.user is None:
-            return redirect(url_for("auth.login"))
-
-        return view(**kwargs)
-
-    return wrapped_view
-
-
-@bp.before_app_request
-def load_logged_in_user():
-    """If a user id is stored in the session, load the user object from
-    the database into ``g.user``."""
-    user_id = session.get("user_id")
-
-    if user_id is None:
-        g.user = None
-    else:
-        g.user = User.query.filter_by(id=user_id).first()
-
+@login_manager.unauthorized_handler
+def unauthorized():
+    flash("You must be logged in to view that page.")
+    return redirect(url_for("accounts.login"))
 
 @bp.route("/register", methods=["GET", "POST"])
 def register():
-    username = ""
+    form=RegisterForm()
+    if current_user.is_authenticated:
+        return redirect(url_for("accounts.settings"))
+    else:
+        if request.method=='POST' and form.validate_on_submit():
+            return redirect(url_for('products.index'))
+        else:
+            return render_template('accounts/register.html', form=form)
 
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-        password2 = request.form["password2"]
-
-        error = None
-        user = User.query.filter_by(username=username).first()
-
-        if user is not None:
-            error = "Username " + username + " already exists."
-        elif password != password2:
-            error = "Passwords do not match."
-
-        if error is None:
-            # The username and password are valid, so we can insert the user into the database.
-            user = User(username=username, password=generate_password_hash(password))
-            db.session.add(user)
-            db.session.commit()
-            return redirect(url_for("auth.login"))
-
-        flash(error)
-
-    return render_template("auth/register.html", username=username)
-
-@bp.route("/login", methods=("GET", "POST"))
+@bp.route("/login", methods=["GET", "POST"])
 def login():
-    """Log in a registered user by adding the user id to the session."""
-    username = ""
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
+    form =LoginForm()
 
-        error = None
-        user = User.query.filter_by(username=username).first()
-
-        if user is None:
-            error = "Incorrect username."
-        elif not check_password_hash(user.password, password):
-            error = "Incorrect password."
-
-        if error is None:
-            # store the user id in a new session and return to the index
-            session.clear()
-            session["user_id"] = user.id
-            return redirect(url_for("index"))
-
-        flash(error)
-
-    return render_template("auth/login.html",username=username)
+    if current_user.is_authenticated:
+        return redirect(url_for('products.index'))
+    else:
+        if request.method=='POST' and form.validate_on_submit():
+            return redirect(url_for('products.index'))
+        else:
+            return render_template('accounts/login.html', form=form)
 
 @bp.route("/logout")
+@login_required
 def logout():
     """Clear the current session, including the stored user id."""
-    session.clear()
-    return redirect(url_for("index"))
+    logout_user()
+    return redirect(url_for('products.index'))
+
+@bp.route("/settings")
+@login_required
+def settings():
+    products = Product.query.filter_by(admin_id=current_user.id).all()
+    total_products = Product.query.filter_by(admin_id=current_user.id).count()
+    total_orders = Orders.query.filter_by(buyer_id=current_user.id).count()
+    addresses = DeliveryAddress.query.filter_by(user_id=current_user.id).limit(5).all()
+    orders = Orders.query.filter_by(buyer_id=current_user.id).order_by(Orders.time_created.desc()).limit(5).all()
+    return render_template("accounts/settings.html",
+                           title="My Account",
+                           addresses=addresses,
+                           orders=orders,
+                           products=products,
+                           total_orders=total_orders,
+                           total_products=total_products)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.query(User).get(int(user_id))
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    flash("You must be logged in to view that page.")
+    return redirect(url_for('accounts.login'))
+
+@bp.route("/addresses/new", methods=["GET", "POST"])
+@login_required
+def create_address():
+    form = DeliveryForm()
+    addresses = DeliveryAddress.query.filter_by(user_id=current_user.id).all()
+    if request.method=='POST' and form.validate_on_submit():
+        new_address = DeliveryAddress(
+            first_name=form.first_name.data,
+            last_name=form.last_name.data,
+            email=form.email.data,
+            delivery_house_nr=form.delivery_house_nr.data,
+            delivery_street=form.delivery_street.data,
+            delivery_additional=form.delivery_additional.data,
+            delivery_state=form.delivery_state.data,
+            delivery_postal=form.delivery_postal.data,
+            delivery_country=form.delivery_country.data,
+            instructions=form.instructions.data,
+            user_id=current_user.id,
+            is_valid=False
+        )
+        db.session.add(new_address)
+        db.session.commit()
+        flash('Address added successfully.')
+        return redirect(url_for('accounts.create_address'))
+    else:
+        return render_template('accounts/delivery/form.html', title="New Address", addresses=addresses, form=form)
+
+@bp.route("/addresses/<int:address_id>/update", methods=["GET", "POST"])
+@login_required
+def update_address(address_id):
+    addresses = DeliveryAddress.query.filter_by(user_id=current_user.id).all()
+    address = DeliveryAddress.query.filter_by(id=address_id).first()
+
+    if current_user.id != address.user_id:
+        flash("You do not have permission to edit that address.")
+        return redirect(url_for('accounts.settings'))
+
+    form = DeliveryForm()
+
+    if request.method=='POST' and form.validate_on_submit():
+        address.first_name=form.first_name.data
+        address.last_name=form.last_name.data
+        address.email=form.email.data
+        address.delivery_house_nr=form.delivery_house_nr.data
+        address.delivery_street=form.delivery_street.data
+        address.delivery_additional=form.delivery_additional.data
+        address.delivery_state=form.delivery_state.data
+        address.delivery_postal=form.delivery_postal.data
+        address.delivery_country=form.delivery_country.data
+        address.instructions=form.instructions.data
+        db.session.commit()
+        flash('Address updated successfully.')
+        return redirect(url_for('accounts.settings'))
+    else:
+        form.first_name.data = address.first_name
+        form.last_name.data = address.last_name
+        form.email.data = address.email
+        form.delivery_house_nr.data = address.delivery_house_nr
+        form.delivery_street.data = address.delivery_street
+        form.delivery_additional.data = address.delivery_additional
+        form.delivery_state.data = address.delivery_state
+        form.delivery_postal.data = address.delivery_postal
+        form.delivery_country.data = address.delivery_country
+        form.instructions.data = address.instructions
+        return render_template('accounts/delivery/form.html', title="Update Address", addresses=addresses, address_id=address.id,form=form)
+
+@bp.route('/addresses/delete', methods=['POST'])
+@login_required
+def delete_address():
+    address_id = request.form.get('address_id')
+    if address_id:
+        address = DeliveryAddress.query.filter_by(id=address_id).first()
+        print(address)
+        if address:
+            if current_user.id == address.user_id:
+                db.session.delete(address)
+                db.session.commit()
+                flash('Address deleted successfully.')
+        else:
+            flash('Address not found in database.')
+    return redirect(url_for('accounts.create_address'))

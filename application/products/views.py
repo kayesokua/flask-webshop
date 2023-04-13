@@ -1,54 +1,88 @@
-import stripe
+import re
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for, session, jsonify
 from werkzeug.exceptions import abort
 from application import db
-from collections import defaultdict
-from application.accounts.views import login_required
-import re
-from collections import defaultdict
+from application.models import User, Product, Orders, OrderLine, Prices
+from flask_login import login_required, current_user
+from .forms import ProductForm
 import os
-from application.models import User, Product, Orders, OrderLine
+import stripe
 
-from dotenv import load_dotenv
-load_dotenv()
-
-bp = Blueprint("products", __name__)
-
-stripe_keys = {
-    "secret_key": os.environ["STRIPE_SECRET_KEY"],
-    "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"],
-    "endpoint_secret": os.environ["STRIPE_ENDPOINT_SECRET"]
-}
+bp = Blueprint("products", __name__, url_prefix="/products")
 
 @bp.route("/")
 def index():
     products = Product.query.all()
     return render_template("products/index.html", products=products)
 
-def get_product_by_admin(id, check_admin=True):
-    product = Product.query.filter_by(id=id).join(User).filter_by(id=User.id).first()
-    if not product:
-        abort(404, f"Product id {id} doesn't exist.")
-    if check_admin and product.admin_id != g.user.id:
-        abort(403)
-    return product
+def create_stripe_product(new_product):
+    stripe.api_key = os.environ.get('STRIPE_SECRET_KEY_DEV')
+    stripe_product = stripe.Product.create(name=new_product.name, description=new_product.description)
+    stripe_product_id = stripe_product.id
+    return stripe_product_id
 
-def get_product_by_id(id):
-    product = Product.query.filter_by(id=id).first()
-    if not product:
-        abort(404, f"Product id {id} doesn't exist.")
-    return product
+def create_stripe_price(stripe_product_id, new_price):
+    stripe.api_key = os.environ.get('STRIPE_SECRET_KEY_DEV')
+    stripe_price = stripe.Price.create(
+            unit_amount=int(new_price.price) * 100,
+            currency="eur",
+            product=stripe_product_id,
+        )
+    return stripe_price.id
 
-
-@bp.route('/product/<int:id>/', methods=('GET', 'POST'))
+@bp.route("/add", methods=("GET", "POST"))
 @login_required
-def read(id):
-    product = get_product_by_id(id)
+def create_product():
+    form = ProductForm()
+    if current_user.is_admin == False:
+        flash("You are not authorized to add products.")
+        return redirect(url_for('products.index'))
+
+    if form.validate_on_submit():
+        new_product = Product(
+            name=form.name.data,
+            price=form.price.data,
+            stock=form.stock.data,
+            image=form.image.data,
+            description=form.description.data,
+            admin_id=current_user.id
+        )
+
+        db.session.add(new_product)
+        db.session.commit()
+
+        new_price = Prices(
+            product_id=new_product.id,
+            price=form.price.data
+        )
+
+        db.session.add(new_price)
+        db.session.commit()
+
+        new_product.price_id = new_price.id
+        db.session.commit()
+
+        stripe_product_id = create_stripe_product(new_product)
+        stripe_price_id = create_stripe_price(stripe_product_id, new_price)
+
+        new_product.stripe_product_ref = stripe_product_id
+        new_price.stripe_price_id = stripe_price_id
+        db.session.commit()
+
+        flash('Product added successfully.')
+        return redirect(url_for('products.index'))
+    else:
+        return render_template('products/form.html', title="Add Product", form=form)
+
+@bp.route('/<int:id>/', methods=('GET', 'POST'))
+@login_required
+def read_product(id):
+    product = Product.query.filter_by(id=id).first_or_404()
+    recommendations = Product.query.filter(Product.id != id).limit(3).all()
     quantity = 0
 
     if request.method == 'POST':
         quantity = int(request.form['quantity'])
-
         if 'cart' in session:
             cart = session['cart']
             item_exists = False
@@ -63,74 +97,61 @@ def read(id):
         else:
             session['cart'] = [{'id': id, 'quantity': quantity}]
         session.modified = True
-
-    return render_template('products/detail.html', product=product)
-
+    return render_template('products/detail.html', product=product, recommendations=recommendations)
 
 @bp.route('/<int:id>/update', methods=['GET', 'POST'])
 @login_required
-def update(id):
+def update_product(id):
     product = Product.query.filter_by(id=id).first_or_404()
-    if product.admin_id != g.user.id:
-        abort(403)
 
-    if request.method == 'POST':
-        name = request.form['name']
-        price = float(request.form['price'])
-        stock = int(request.form['stock'])
-        description = request.form['description']
-        image = request.form['image']
-        error = None
+    if not current_user.is_admin or current_user.id != product.admin_id:
+        flash("You are not authorized to update products.")
+        return redirect(url_for('products.index'))
 
+    form = ProductForm(product=product)
 
-        if not name:
-            error = 'Name is required.'
-        elif not price or price < 0:
-            error = 'Price must be a positive number.'
-        elif not stock or stock < 0:
-            error = 'Stock must be a positive integer.'
-        elif not image:
-            error = 'Image is required.'
-        elif not re.match(r'^https://', image):
-            error = 'Image URL must start with "https://"'
+    if form.validate_on_submit():
+        product.name = form.name.data
+        product.price = form.price.data
+        product.stock = form.stock.data
+        product.image = form.image.data
+        product.description = form.description.data
 
-        print("error: ", error)
-        if error is not None:
-            flash(error)
-        else:
-            try:
-                product.name = name
-                product.price = price
-                product.stock = stock
-                product.description = description
-                product.image = image
-                db.session.commit()
-                print("product updated")
-                print(db.session.commit())
-            except Exception as e:
-                flash(f'An error occurred: {e}')
-                return redirect(url_for('store.index'))
+        db.session.commit()
 
-            flash('Product updated successfully.')
-            return redirect(url_for('store.index', id=product.id))
+        flash('Product updated successfully.')
+        return redirect(url_for('products.index', id=product.id))
 
-    return render_template('products/update.html', product=product)
+    form.name.data = product.name
+    form.price.data = product.price
+    form.stock.data = product.stock
+    form.image.data = product.image
+    form.description.data = product.description
 
-@bp.route('/<int:id>/delete', methods=['POST'])
+    return render_template('products/form.html', title='Update Product', form=form, product=product)
+
+@bp.route('/delete', methods=['POST'])
 @login_required
-def delete(id):
-    product = get_product_by_admin(id)
+def delete_product():
+
+    product_id = request.form.get('product_id')
+
+    product = Product.query.filter_by(id=product_id).first_or_404()
+    if not current_user.is_admin or current_user.id != product.admin_id:
+        flash("You are not authorized to delete products.")
+        return redirect(url_for('products.index'))
+
     if not product:
         flash('Product not found')
-        return redirect(url_for('store.index'))
+        return redirect(url_for('products.index'))
 
     try:
         db.session.delete(product)
         db.session.commit()
         flash('Product deleted successfully')
+
     except Exception as e:
         db.session.rollback()
         flash(f'An error occurred while deleting the product: {e}')
 
-    return redirect(url_for('store.index'))
-
+    return redirect(url_for('products.index'))
