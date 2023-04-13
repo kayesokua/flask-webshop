@@ -6,7 +6,8 @@ from application.models import User
 
 @pytest.fixture
 def app():
-    app = create_app(config_class=TestingConfig)
+    app = create_app()
+    app.config.from_object('config.TestingConfig')
     yield app
 
     with app.app_context():

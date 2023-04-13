@@ -1,17 +1,19 @@
 from flask import Flask, render_template, redirect, url_for, request, session, flash, abort
 from flask_login import LoginManager
-from config import DevelopmentConfig
+from config import DevelopmentConfig, ProductionConfig, TestingConfig
 from application.extensions.db import db, migrate
 from application.products.views import index
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-def create_app(config_class=DevelopmentConfig):
-
+def create_app():
     app = Flask(__name__)
-    app.config.from_object(config_class)
+    app.config.from_object('config.DevelopmentConfig')
     db.init_app(app)
 
     with app.app_context():
-        from application.models import User, Product, Orders, OrderLine
+        from application.models import User, Product, OrderLine, Orders, DeliveryAddress, Prices
         db.create_all()
         migrate.init_app(app, db, compare_type=True)
 
@@ -27,12 +29,10 @@ def create_app(config_class=DevelopmentConfig):
     login_manager = LoginManager()
     login_manager.login_view = 'accounts.login'
     login_manager.init_app(app)
+
     @login_manager.user_loader
     def load_user(user_id):
-        # since the user_id is just the primary key of our user table, use it in the query for the user
         return User.query.get(int(user_id))
-
-
 
     @app.errorhandler(401)
     def unauthorized_page(error):
