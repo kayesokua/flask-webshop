@@ -6,9 +6,13 @@ from application.models.accounts import User, DeliveryAddress
 from application.models.products import Product
 from application.models.orders import Orders, OrderLine
 from .forms import LoginForm, RegisterForm, DeliveryForm
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 bp = Blueprint("accounts", __name__, url_prefix="/accounts")
 login_manager = LoginManager()
+
+limiter = Limiter(key_func=get_remote_address)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -20,6 +24,7 @@ def unauthorized():
     return redirect(url_for("accounts.login"))
 
 @bp.route("/register", methods=["GET", "POST"])
+@limiter.limit("3 per minute")
 def register():
     form=RegisterForm()
     if current_user.is_authenticated:
@@ -31,6 +36,7 @@ def register():
             return render_template('accounts/register.html', form=form)
 
 @bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per 10 minutes")
 def login():
     form =LoginForm()
 

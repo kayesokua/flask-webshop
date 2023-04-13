@@ -2,10 +2,10 @@ from flask import Flask, render_template, redirect, url_for, request, session, f
 from flask_login import LoginManager
 from config import DevelopmentConfig, ProductionConfig, TestingConfig
 from application.extensions.db import db, migrate
-from application.products.views import index
-import os
-from dotenv import load_dotenv
-load_dotenv()
+from application.products.routes import index
+
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 def create_app():
     app = Flask(__name__)
@@ -17,9 +17,9 @@ def create_app():
         db.create_all()
         migrate.init_app(app, db, compare_type=True)
 
-    from application.accounts.views import bp as accounts
-    from application.products.views import bp as products
-    from application.orders.views import bp as orders
+    from application.accounts.routes import bp as accounts
+    from application.products.routes import bp as products
+    from application.orders.routes import bp as orders
 
     app.register_blueprint(accounts)
     app.register_blueprint(products)
@@ -45,5 +45,12 @@ def create_app():
     @app.errorhandler(500)
     def server_error_page(error):
         return render_template("errors/500.html"), 500
+
+    limiter = Limiter(
+    get_remote_address,
+        app=app,
+        default_limits=["200 per day", "50 per hour"],
+        storage_uri="memory://",
+    )
 
     return app

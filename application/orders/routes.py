@@ -9,9 +9,13 @@ from application.models import Product, Orders, OrderLine, Prices
 from application.models.accounts import DeliveryAddress
 from application.orders.forms import OrderStatusForm, CheckoutForm
 
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
 import stripe
 
 bp = Blueprint("orders", __name__)
+limiter = Limiter(key_func=get_remote_address)
 
 def handle_cart():
     products = []
@@ -84,6 +88,7 @@ def cart():
     return render_template('orders/cart.html', products=products, grand_total=grand_total, shipping_fee=shipping_fee, total_payment=total_payment)
 
 @bp.route('/cart/checkout', methods=['GET', 'POST'])
+@limiter.limit("1 per minute", key_func=get_remote_address)
 @login_required
 def checkout():
     form = CheckoutForm()
