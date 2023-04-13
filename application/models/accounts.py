@@ -1,6 +1,7 @@
 from application import db
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from flask_login import UserMixin
 
 class User(db.Model, UserMixin):
@@ -11,6 +12,8 @@ class User(db.Model, UserMixin):
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
     accept_tos = Column(Boolean, default=False)
+    time_created = Column(DateTime(timezone=True), server_default=func.now())
+    time_updated = Column(DateTime(timezone=True), onupdate=func.now())
 
     def get_id(self):
         return str(self.id)
@@ -30,6 +33,8 @@ class DeliveryAddress(db.Model):
     delivery_postal = Column(String(10), nullable=False)
     delivery_country = Column(String(2), nullable=False)
     instructions = Column(String(255))
+    time_created = Column(DateTime(timezone=True), server_default=func.now())
+    time_updated = Column(DateTime(timezone=True), onupdate=func.now())
     is_valid = Column(Boolean, default=False)
 
     def __repr__(self):

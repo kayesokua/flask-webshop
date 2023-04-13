@@ -2,9 +2,11 @@ import re
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for, session, jsonify
 from werkzeug.exceptions import abort
 from application import db
-from application.models import User, Product, Orders, OrderLine
+from application.models import User, Product, Orders, OrderLine, Prices
 from flask_login import login_required, current_user
 from .forms import ProductForm
+import os
+import stripe
 
 bp = Blueprint("products", __name__, url_prefix="/products")
 
@@ -12,6 +14,21 @@ bp = Blueprint("products", __name__, url_prefix="/products")
 def index():
     products = Product.query.all()
     return render_template("products/index.html", products=products)
+
+def create_stripe_product(new_product):
+    stripe.api_key = os.environ.get('STRIPE_SECRET_KEY_DEV')
+    stripe_product = stripe.Product.create(name=new_product.name, description=new_product.description)
+    stripe_product_id = stripe_product.id
+    return stripe_product_id
+
+def create_stripe_price(stripe_product_id, new_price):
+    stripe.api_key = os.environ.get('STRIPE_SECRET_KEY_DEV')
+    stripe_price = stripe.Price.create(
+            unit_amount=int(new_price.price) * 100,
+            currency="eur",
+            product=stripe_product_id,
+        )
+    return stripe_price.id
 
 @bp.route("/add", methods=("GET", "POST"))
 @login_required
@@ -30,8 +47,28 @@ def create_product():
             description=form.description.data,
             admin_id=current_user.id
         )
+
         db.session.add(new_product)
         db.session.commit()
+
+        new_price = Prices(
+            product_id=new_product.id,
+            price=form.price.data
+        )
+
+        db.session.add(new_price)
+        db.session.commit()
+
+        new_product.price_id = new_price.id
+        db.session.commit()
+
+        stripe_product_id = create_stripe_product(new_product)
+        stripe_price_id = create_stripe_price(stripe_product_id, new_price)
+
+        new_product.stripe_product_ref = stripe_product_id
+        new_price.stripe_price_id = stripe_price_id
+        db.session.commit()
+
         flash('Product added successfully.')
         return redirect(url_for('products.index'))
     else:
