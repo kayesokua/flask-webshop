@@ -60,32 +60,6 @@
           class="btn btn-lg btn-outline-dark w-100">Add/Update
           Address</a>
 
-        <!-- {{ form.selected_address() }}
-
-        {% if form.selected_address.choices %}
-        <ul class="list-group">
-          {% for choice in form.selected_address.choices %}
-          <li class="list-group-item">
-            <div class="form-check">
-              <input class="form-check-input" type="radio" name="{{ form.selected_address.name }}"
-                value="{{ choice[0] }}" id="{{ form.selected_address.id }}_{{ loop.index0 }}" {% if
-                form.selected_address.checked==choice[0] %}checked{% endif %}>
-              <label class="form-check-label" for="{{ form.selected_address.id }}_{{ loop.index0 }}">
-                <h6 class="my-0">{{ choice.delivery_house_nr }} {{ choice.delivery_street }}, {{ choice.delivery_state }} {{ choice.delivery_postal }}</h6>
-                <small class="text-muted">Contact Person: {{ choice.first_name }}</small>
-              </label>
-            </div>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p>No addresses in the address book yet.</p>
-        {% endif %}
-        <a href="{{ url_for('accounts.create_address') }}"
-          class="btn btn-lg btn-outline-dark mt-3 mb-3 w-100">Add/Update
-          Address</a> -->
-
-
       </div>
 
     </div>
@@ -106,40 +80,11 @@
       </ul>
 
       {{form.csrf_token}}
+
       {{form.checkout(class="btn btn-lg btn-danger mt-3 mb-3 w-100")}}
   </form>
 </div>
 
-
-  <button class="btn btn-lg btn-danger mt-3 mb-3 w-100" id="stripeme">Pay Online</button>
-  <script src="https://js.stripe.com/v3/"></script>
-
-  <script>
-    console.log("Sanity check!");
-
-    // Get Stripe publishable key
-    fetch("/config")
-      .then((result) => { return result.json(); })
-      .then((data) => {
-        // Initialize Stripe.js
-        const stripe = Stripe(data.publicKey);
-
-        // Event handler
-        document.querySelector("#stripeme").addEventListener("click", () => {
-          // Get Checkout Session ID
-          fetch('/create-checkout-session')
-            .then((result) => { return result.json(); })
-            .then((data) => {
-              console.log(data);
-              // Redirect to Stripe Checkout
-              return stripe.redirectToCheckout({ sessionId: data.sessionId })
-            })
-            .then((res) => {
-              console.log(res);
-            });
-        });
-      });
-  </script>
 </div>
 
 </div>

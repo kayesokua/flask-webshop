@@ -1,29 +1,17 @@
-import stripe
-from flask import Blueprint, flash, g, redirect, render_template, request, url_for, session, jsonify
-from application.extensions.db import db
-from collections import defaultdict
-from flask_login import login_required, current_user
-from collections import defaultdict
 import os
-from application.models import Product, Orders, OrderLine
-from application.orders.forms import OrderStatusForm, CheckoutForm
+from sqlalchemy import and_
+
+from flask import Blueprint, flash, g, redirect, render_template, request, url_for, session, jsonify
+from flask_login import login_required, current_user
+
+from application.extensions.db import db
+from application.models import Product, Orders, OrderLine, Prices
 from application.models.accounts import DeliveryAddress
+from application.orders.forms import OrderStatusForm, CheckoutForm
+
+import stripe
 
 bp = Blueprint("orders", __name__)
-
-from dotenv import load_dotenv
-load_dotenv()
-
-stripe_keys = {
-    "secret_key": os.environ["STRIPE_SECRET_KEY"],
-    "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"],
-    "endpoint_secret": os.environ["STRIPE_ENDPOINT_SECRET"]
-}
-
-@bp.route("/config")
-def get_publishable_key():
-    stripe_config = {"publicKey": stripe_keys["publishable_key"]}
-    return jsonify(stripe_config)
 
 def handle_cart():
     products = []
@@ -90,9 +78,10 @@ def cart_remove_item(index):
 @bp.route("/cart")
 @login_required
 def cart():
+    if 'cart' not in session:
+        session['cart'] = []
     products, grand_total, shipping_fee, total_payment = handle_cart()
     return render_template('orders/cart.html', products=products, grand_total=grand_total, shipping_fee=shipping_fee, total_payment=total_payment)
-
 
 @bp.route('/cart/checkout', methods=['GET', 'POST'])
 @login_required
@@ -122,73 +111,86 @@ def checkout():
         db.session.commit()
 
         session['cart'].pop()
+        session.modified = True
 
-        flash('Your order has been created successfully.')
-        return redirect(url_for('accounts.settings'))
+        order_id = new_order.id
 
-    return render_template('orders/checkout.html', products=products, grand_total=grand_total, shipping_fee=shipping_fee, total_payment=total_payment, form=form)
+        stripe.api_key = os.environ.get('STRIPE_SECRET_KEY_DEV')
+        domain_url = os.environ.get('DOMAIN_URL_DEV')
 
-stripe.api_key = stripe_keys["secret_key"]
+        line_items = (
+        db.session.query(
+            Prices.stripe_price_id,
+            OrderLine.quantity
+        )
+        .join(
+            Product,
+            Prices.product_id == Product.id
+        )
+        .join(
+            OrderLine,
+            and_(
+                OrderLine.product_id == Product.id,
+                OrderLine.order_id == order_id
+            )
+        )
+        .all())
 
-@bp.route("/cart/create-checkout-session", methods=["GET", "POST"])
-def create_checkout_session():
-    domain_url = "https://127.0.0.1:8000/"
-    stripe.api_key = stripe_keys["secret_key"]
-    products, grand_total, shipping_fee, total_charge = handle_cart()
+        line_items = [{"price": price, "quantity": quantity} for price, quantity in line_items]
 
-    line_items = []
-    for product in products:
-        line_items.append({
-            "name": product['name'],
-            "quantity": product['qty'],
-            "currency": "eur",
-            "amount": round(product['price'] * 100),
-        })
-    if shipping_fee > 0:
-        line_items.append({
-            "name": "Shipping Fee",
-            "quantity": 1,
-            "currency": "eur",
-            "amount": round(shipping_fee * 100),
-        })
-
-    try:
-        checkout_session = stripe.checkout.Session.create(
-            success_url=domain_url + "success?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url=domain_url + f"checkout?session_id={{CHECKOUT_SESSION_ID}}",
-            payment_method_types=["card"],
+        stripe_session = stripe.checkout.Session.create(
+            shipping_options=[
+                {
+                "shipping_rate_data": {
+                    "type": "fixed_amount",
+                    "fixed_amount": {"amount": 590, "currency": "eur"},
+                    "display_name": "Standard Shipping",
+                    "delivery_estimate": {
+                    "minimum": {"unit": "business_day", "value": 5},
+                    "maximum": {"unit": "business_day", "value": 7},
+                    },
+                },
+                },
+                {
+                "shipping_rate_data": {
+                    "type": "fixed_amount",
+                    "fixed_amount": {"amount": 990, "currency": "eur"},
+                    "display_name": "Next day air",
+                    "delivery_estimate": {
+                    "minimum": {"unit": "business_day", "value": 1},
+                    "maximum": {"unit": "business_day", "value": 1},
+                    },
+                },
+                },],
             mode="payment",
-            line_items=line_items
-        )
-        return jsonify({"sessionId": checkout_session["id"]})
-    except Exception as e:
-        return jsonify(error=str(e)), 403
-
-
-@bp.route("/webhook", methods=['POST'])
-def stripe_webhook():
-    payload = request.get_data(as_text=True)
-    sig_header = request.headers.get('Stripe-Signature')
-
-    try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, stripe_keys["endpoint_secret"]
+            line_items=line_items,
+            success_url=f"{domain_url}/orders/success",
+            cancel_url=f"{domain_url}/orders/cancel",
         )
 
-    except ValueError as e:
-        return 'Invalid payload', 400
-    except stripe.error.SignatureVerificationError as e:
-        return 'Invalid signature', 400
+        # Save the session id to the order object
+        order = Orders.query.filter_by(id=order_id).first()
+        order.stripe_payment_id = stripe_session.id
+        db.session.commit()
 
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
-        handle_checkout_session(session)
+        stripe_session_id_url = stripe_session.url
+        db.session.commit()
 
-    return 'Success', 200
+        return redirect(stripe_session_id_url, code=303)
+    return render_template('orders/checkout.html', form=form, products=products, grand_total=grand_total, shipping_fee=shipping_fee, total_payment=total_payment)
 
-def handle_checkout_session(session):
-    print("Payment was successful.")
+@bp.route("/config")
+def get_publishable_key():
+    stripe_config = {"publicKey": os.environ.get('STRIPE_PUBLISHABLE_KEY')}
+    return jsonify(stripe_config)
 
-@bp.route("/success")
-def success():
-    return render_template("products/payments.html")
+
+@bp.route("/orders/success")
+def payment_successful():
+    flash('Your order has been created successfully.')
+    return redirect(url_for('accounts.settings'))
+
+@bp.route("/orders/cancel")
+def payment_unsuccessful():
+    flash('Your payment was unsuccessful. Please go to our Acount > Order History > Order to find the unique payment link.')
+    return redirect(url_for('accounts.settings'))

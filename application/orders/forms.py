@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_login import current_user
-from wtforms import StringField, IntegerField, FloatField, TextAreaField, SubmitField, SelectField,RadioField
+from wtforms import StringField, IntegerField, FloatField, TextAreaField, SubmitField, SelectField,RadioField, HiddenField
 from wtforms.validators import DataRequired, Email, Length, NumberRange, ValidationError
 from email_validator import validate_email, EmailNotValidError
 from application.models.accounts import DeliveryAddress
