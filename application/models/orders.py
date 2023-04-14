@@ -1,13 +1,15 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean
+import uuid
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from application import db
 
 class Orders(db.Model):
     __tablename__ = 'orders'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    address_id = Column(Integer, ForeignKey('addresses.id'), nullable=False)
-    buyer_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    address_id = Column(UUID, ForeignKey('addresses.id'), nullable=False)
+    buyer_id = Column(UUID, ForeignKey('users.id'), nullable=False)
     shipping_fee = Column(Float, nullable=False)
     grand_total = Column(Float, nullable=False)
 
@@ -27,8 +29,8 @@ class Orders(db.Model):
 
 class OrderLine(db.Model):
     __tablename__ = 'order_line'
-    order_id = Column(Integer, ForeignKey('orders.id'), primary_key=True)
-    product_id = Column(Integer, ForeignKey('products.id'), primary_key=True)
+    order_id = Column(UUID(as_uuid=True), ForeignKey('orders.id'), primary_key=True)
+    product_id = Column(UUID(as_uuid=True), ForeignKey('products.id'), primary_key=True)
     quantity = Column(Integer, nullable=False)
     total_price = Column(Float, nullable=False)
     product = relationship('Product')
