@@ -2,24 +2,24 @@ from flask import Flask, render_template, redirect, url_for, request, session, f
 from flask_login import LoginManager
 from config import DevelopmentConfig, ProductionConfig, TestingConfig
 from application.extensions.db import db, migrate
-from application.products.views import index
-import os
-from dotenv import load_dotenv
-load_dotenv()
+from application.extensions.cache import cache
+from application.extensions.limiter import limiter
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.DevelopmentConfig')
     db.init_app(app)
+    cache.init_app(app, config={'CACHE_TYPE': 'simple'})
+    limiter.init_app(app)
 
     with app.app_context():
         from application.models import User, Product, OrderLine, Orders, DeliveryAddress, Prices
         db.create_all()
         migrate.init_app(app, db, compare_type=True)
 
-    from application.accounts.views import bp as accounts
-    from application.products.views import bp as products
-    from application.orders.views import bp as orders
+    from application.accounts.routes import bp as accounts
+    from application.products.routes import bp as products
+    from application.orders.routes import bp as orders
 
     app.register_blueprint(accounts)
     app.register_blueprint(products)

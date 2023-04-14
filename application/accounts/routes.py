@@ -1,14 +1,15 @@
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 from flask_login import LoginManager, login_required, login_user, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from application import db
+from application import db, cache, limiter
 from application.models.accounts import User, DeliveryAddress
 from application.models.products import Product
 from application.models.orders import Orders, OrderLine
 from .forms import LoginForm, RegisterForm, DeliveryForm
 
-bp = Blueprint("accounts", __name__, url_prefix="/accounts")
 login_manager = LoginManager()
+
+bp = Blueprint("accounts", __name__, url_prefix="/accounts")
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -20,6 +21,8 @@ def unauthorized():
     return redirect(url_for("accounts.login"))
 
 @bp.route("/register", methods=["GET", "POST"])
+@limiter.limit("3 per minute")
+@cache.cached(timeout=60, key_prefix='register')
 def register():
     form=RegisterForm()
     if current_user.is_authenticated:
@@ -31,6 +34,8 @@ def register():
             return render_template('accounts/register.html', form=form)
 
 @bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per 10 minutes")
+@cache.cached(timeout=60, key_prefix='login')
 def login():
     form =LoginForm()
 
@@ -51,6 +56,7 @@ def logout():
 
 @bp.route("/settings")
 @login_required
+@cache.cached(timeout=60, key_prefix='settings')
 def settings():
     products = Product.query.filter_by(admin_id=current_user.id).all()
     total_products = Product.query.filter_by(admin_id=current_user.id).count()
