@@ -20,3 +20,6 @@ def create_admin_command(username, password):
         create_admin(username, password)
 
 app.cli.add_command(create_admin_command)
+
+if __name__ == '__main__':
+    app.run(threaded=True)
