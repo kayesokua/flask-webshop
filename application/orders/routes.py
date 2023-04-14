@@ -1,21 +1,14 @@
-import os
+import os, stripe
 from sqlalchemy import and_
-
-from flask import Blueprint, flash, g, redirect, render_template, request, url_for, session, jsonify
+from flask import Blueprint, flash, redirect, render_template, url_for, session
 from flask_login import login_required, current_user
-
 from application.extensions.db import db
+from application.extensions.cache import cache
+from application.extensions.limiter import limiter
 from application.models import Product, Orders, OrderLine, Prices
-from application.models.accounts import DeliveryAddress
-from application.orders.forms import OrderStatusForm, CheckoutForm
-
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-
-import stripe
+from application.orders.forms import CheckoutForm
 
 bp = Blueprint("orders", __name__)
-limiter = Limiter(key_func=get_remote_address)
 
 def handle_cart():
     products = []
@@ -88,7 +81,8 @@ def cart():
     return render_template('orders/cart.html', products=products, grand_total=grand_total, shipping_fee=shipping_fee, total_payment=total_payment)
 
 @bp.route('/cart/checkout', methods=['GET', 'POST'])
-@limiter.limit("1 per minute", key_func=get_remote_address)
+@limiter.limit("1 per minute")
+@cache.cached(timeout=60, key_prefix='checkout')
 @login_required
 def checkout():
     form = CheckoutForm()
@@ -173,7 +167,6 @@ def checkout():
             cancel_url=f"{domain_url}/orders/cancel",
         )
 
-        # Save the session id to the order object
         order = Orders.query.filter_by(id=order_id).first()
         order.stripe_payment_id = stripe_session.id
         db.session.commit()
@@ -183,12 +176,6 @@ def checkout():
 
         return redirect(stripe_session_id_url, code=303)
     return render_template('orders/checkout.html', form=form, products=products, grand_total=grand_total, shipping_fee=shipping_fee, total_payment=total_payment)
-
-@bp.route("/config")
-def get_publishable_key():
-    stripe_config = {"publicKey": os.environ.get('STRIPE_PUBLISHABLE_KEY')}
-    return jsonify(stripe_config)
-
 
 @bp.route("/orders/success")
 def payment_successful():
