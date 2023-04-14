@@ -1,18 +1,13 @@
-import re
-from flask import Blueprint, flash, g, redirect, render_template, request, url_for, session, jsonify
-from werkzeug.exceptions import abort
+import os, stripe
+from flask import Blueprint, flash, redirect, render_template, request, url_for, session
 from application import db
-from application.models import User, Product, Orders, OrderLine, Prices
+from application.extensions.limiter import limiter
+from application.extensions.cache import cache
+from application.models import Product, Prices
 from flask_login import login_required, current_user
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-
 from .forms import ProductForm
-import os
-import stripe
 
 bp = Blueprint("products", __name__, url_prefix="/products")
-limiter = Limiter(key_func=get_remote_address)
 
 @bp.route("/")
 def index():
@@ -34,8 +29,9 @@ def create_stripe_price(stripe_product_id, new_price):
         )
     return stripe_price.id
 
-@limiter.limit("1 per minute", key_func=get_remote_address)
 @bp.route("/add", methods=("GET", "POST"))
+@limiter.limit("1 per minute")
+@cache.cached(timeout=60, key_prefix='add_product')
 @login_required
 def create_product():
     form = ProductForm()
@@ -80,6 +76,7 @@ def create_product():
         return render_template('products/form.html', title="Add Product", form=form)
 
 @bp.route('/<int:id>/', methods=('GET', 'POST'))
+@cache.cached(timeout=60, key_prefix='read_product')
 @login_required
 def read_product(id):
     product = Product.query.filter_by(id=id).first_or_404()
@@ -105,7 +102,8 @@ def read_product(id):
     return render_template('products/detail.html', product=product, recommendations=recommendations)
 
 @bp.route('/<int:id>/update', methods=['GET', 'POST'])
-@limiter.limit("1 per minute", key_func=get_remote_address)
+@limiter.limit("1 per minute")
+@cache.cached(timeout=60, key_prefix='update_product')
 @login_required
 def update_product(id):
     product = Product.query.filter_by(id=id).first_or_404()
@@ -137,7 +135,8 @@ def update_product(id):
     return render_template('products/form.html', title='Update Product', form=form, product=product)
 
 @bp.route('/delete', methods=['POST'])
-@limiter.limit("1 per minute", key_func=get_remote_address)
+@limiter.limit("1 per minute")
+@cache.cached(timeout=60, key_prefix='delete_product')
 @login_required
 def delete_product():
 
