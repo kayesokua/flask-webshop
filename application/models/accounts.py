@@ -1,6 +1,6 @@
 import uuid
 from application import db
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, LargeBinary
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -10,13 +10,24 @@ class User(db.Model, UserMixin):
     __tablename__ = 'users'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username = Column(String, unique=True, nullable=False)
-    password = Column(String, nullable=False, default='password')
-    password_salt = Column(String, nullable=False, default='salt')
-    is_active = Column(Boolean, default=True)
-    is_admin = Column(Boolean, default=False)
-    accept_tos = Column(Boolean, default=False)
-    time_created = Column(DateTime(timezone=True), server_default=func.now())
-    time_updated = Column(DateTime(timezone=True), onupdate=func.now())
+    hashed_password = Column(LargeBinary, nullable=False)
+    salt = Column(LargeBinary, nullable=False)
+    mobile = Column(String(20), nullable=True, unique=True)
+    twilio_sid = Column(String, nullable=True)
+    mobile_code = Column(String, nullable=True)
+    is_mobile_verified = Column(Boolean, nullable=True)
+    is_seller = Column(Boolean, nullable=False, default=False)
+    is_admin = Column(Boolean, nullable=False, default=False)
+    is_locked = Column(Boolean, nullable=False, default=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_signed_in = Column(DateTime(timezone=True))
+    last_signed_in_ip = Column(String(100))
+    last_password_change = Column(DateTime(timezone=True))
+    last_mobile_code_sent = Column(DateTime(timezone=True))
+    last_mobile_verified = Column(DateTime(timezone=True))
+    mobile_verification_error = Column(Integer, default=0)
+    login_count = Column(Integer, default=0)
 
     def get_id(self):
         return str(self.id)
