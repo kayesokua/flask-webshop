@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="py-5">
+    <h2 class="display-5">{{ title }}</h2>
+  </div>
+  <div class="col-md-6 col-lg-6">
+    <form method="post">
+      {{ form.csrf_token}}
+      <div class="row">
+      <div class="col-3 mt-3 mb-3">
+        {{ form.country_code(class="form-control") }}
+        {% for error in form.country_code.errors %}
+        <p class="small text-danger">{% if error %}{{ form.country_code.label }}: {{ error }}{% endif %}</p>
+        {% endfor %}
+      </div>
+      <div class="col-9 mt-3 mb-3">
+        {{ form.mobile_code(class="form-control") }}
+        {% for error in form.mobile_code.errors %}
+        <p class="small text-danger">{% if error %}{{ form.mobile_code.label }}: {{ error }}{% endif %}</p>
+        {% endfor %}
+      </div>
+    </div>
+      <input type="submit" class="w-100 btn btn-outline-danger btn-lg" value="Submit" />
+    </form>
+    {% if current_user.last_mobile_code_sent is not none and current_user.last_mobile_code_sent.date() != today %}
+    <button for resending notifaction>
+    {% endif %}
+
+
+  </div>
+</div>
+</div>
+
+{% endblock %}
