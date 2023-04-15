@@ -43,7 +43,7 @@ def handle_cart():
     total_charge = grand_total + shipping_fee
     return products, grand_total, shipping_fee, total_charge
 
-@bp.route('/cart/add/<id>')
+@bp.route('/cart/add/<uuid:id>')
 @login_required
 def cart_add_item(id):
     id = int(id)
