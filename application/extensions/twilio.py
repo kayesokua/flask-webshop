@@ -72,3 +72,21 @@ def check_verification_token(token, current_user):
     db.session.commit()
 
     return True
+
+def send_checkout_verification(mobile, order):
+    custom_code = generate_custom_code()
+    custom_message = f"Please confirm your purchase of {order.grand_total} using this {custom_code}."
+    message = client.messages.create(
+        body=custom_message,
+        to='+491635142007',
+        from_='+14407501083')
+    order.checkout_verification_code = custom_code
+    db.session.commit()
+
+def check_checkout_verification(token, order):
+    if token == order.checkout_verification_code:
+        order.is_checkout_verified = True
+        db.session.commit()
+        return True
+    else:
+        return False
