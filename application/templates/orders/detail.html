@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Account Settings{% endblock %}
+{% block content %}
+
+<div class="container">
+    <div class="row">
+
+        <div class="col-md-12 col-lg-12">
+            <div class="mt-5 mb-3">
+                <h2 class="display-5">{{ title }}</h2>
+
+                {% set remaining_seconds = remaining_time.total_seconds() %}
+                {% set remaining_hours = remaining_seconds // 3600 %}
+                {% set remaining_minutes = (remaining_seconds % 3600) // 60 %}
+                <p class="font-size-md">
+                    {% if order.payment_status == 'paid' %}
+                    Payment has been confirmed. Delivery is {{ order.delivery_status }}
+                    {% else %}
+                    {% if remaining_hours > 0 %}
+                    Order expires in {{ remaining_hours | int }} hour{{ 's' if remaining_hours > 1 else '' }} {{
+                    remaining_minutes | int }} minute{{ 's' if remaining_minutes > 1 else '' }}
+                    {% else %}
+                    Order expires in {{ remaining_minutes | int }} minute{{ 's' if remaining_minutes > 1 else '' }}
+                    {% endif %}
+                    {% endif %}
+
+                </p>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-6 ">
+
+            <ul class="list-group mb-3">
+                <li class="list-group-item d-flex bg-light justify-content-between">
+                    <strong>Delivery Information </strong>
+                </li>
+                <li class="list-group-item d-flex justify-content-between lh-sm">
+                    <div>
+                        <p class="my-0">{{ address.first_name }} {{ address.last_name[:1] }}.</p>
+                        <p class="my-0">{{ address.email[:1] + '*****@' + address.email[-6:] }}, {{
+                            current_user.mobile[:2] + '*****' + current_user.mobile[-4:] }}</p>
+                        <p class="my-0">{{ address.delivery_house_nr }} {{ address.delivery_street }}, {{
+                            address.delivery_postal }} {{
+                            address.delivery_state }}</p>
+                    </div>
+                </li>
+                <li class="list-group-item d-flex bg-light justify-content-between">
+                    <strong>Order No. {{ order.id }}</strong>
+                </li>
+                {% for item in order_lines %}
+                <li class="list-group-item d-flex justify-content-between lh-sm">
+                    <div>
+                        <h6 class="my-0">Product Name</h6>
+                        <small class="text-muted">{{ item.product_id }}</small>
+                    </div>
+                    <span class="text-muted">€ 4.99</span>
+                </li>
+                {% endfor %}
+
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>Shipping fee (EUR)</span>
+                    <strong>€ {{ order.shipping_fee }}</strong>
+                </li>
+                <li class="list-group-item d-flex bg-light justify-content-between">
+                    <span>Total with Shipping Fees (EUR)</span>
+                    <strong>€ {{ order.grand_total }}</strong>
+                </li>
+            </ul>
+            {% if order.is_purchase_verified %}
+            {% if order.payment_status == 'pending' %}
+            <a href="{{order.stripe_payment_url}}" class="btn btn-lg btn-danger w-100">Complete payment</a>
+            <a href="{{ url_for('orders.cancel_order', id=order.id)}}"
+                class="btn btn-lg btn-outline-danger mt-3 mb-3 w-100">Cancel Order</a>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% if not order.is_purchase_verified %}
+        <div class="col-md-4 col-lg-4">
+            <p class="font-size-lg">Verify Checkout Session</p>
+            <form method="post">
+              {{ form.csrf_token}}
+              <div class="col-12 mt-3 mb-3">
+                {{ form.verification_token(class="form-control") }}
+                {% for error in form.verification_token.errors %}
+                <p class="small text-danger">{% if error %}{{ form.verification_token.label }}: {{ error }}{% endif %}</p>
+                {% endfor %}
+              </div>
+              <input type="submit" class="w-100 btn btn-outline-danger btn-lg" value="Submit" />
+            </form>
+          </div>
+          {% endif %}
+    </div>
+</div>
+</div>
+{% endblock %}

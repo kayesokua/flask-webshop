@@ -1,4 +1,4 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for, session
 from flask_login import LoginManager, login_required, logout_user, current_user, login_user
 from application import db, cache, limiter
 from application.models.accounts import User, DeliveryAddress
@@ -51,7 +51,7 @@ def login():
 @bp.route("/logout")
 @login_required
 def logout():
-    """Clear the current session, including the stored user id."""
+    session.clear()
     logout_user()
     return redirect(url_for('products.index'))
 
@@ -62,7 +62,7 @@ def settings():
     total_products = Product.query.filter_by(admin_id=current_user.id).count()
     total_orders = Orders.query.filter_by(buyer_id=current_user.id).count()
     addresses = DeliveryAddress.query.filter_by(user_id=current_user.id).limit(5).all()
-    orders = Orders.query.filter_by(buyer_id=current_user.id).order_by(Orders.time_created.desc()).limit(5).all()
+    orders = Orders.query.filter_by(buyer_id=current_user.id).filter(Orders.payment_status != 'cancelled').order_by(Orders.time_created.desc()).limit(5).all()
     days_before_pass_change = 90 - (datetime.now(tz=tz) - current_user.last_password_change).days
 
     return render_template("accounts/settings.html",
@@ -215,3 +215,9 @@ def delete_address():
         else:
             flash('Address not found in database.')
     return redirect(url_for('accounts.create_address'))
+
+@bp.route('/orders')
+@login_required
+def orders_history():
+    orders_history = Orders.query.filter_by(buyer_id=current_user.id).all()
+    return render_template('accounts/orders-history.html', title="Orders History", orders_history=orders_history)

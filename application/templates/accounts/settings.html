@@ -28,12 +28,7 @@
     <div class="col-md-3 col-lg-4">
         <div class="mt-5 mb-3">
 
-            {% if current_user.is_admin %}
-            <h4 class="d-flex justify-content-between align-items-center mb-3">
-                <span class="text-danger">Account Profile</span>
-            </h4>
-            Admin related content
-            {% else %}
+
             <h4 class="d-flex justify-content-between align-items-center mb-3">
                 <span class="text-danger">Account Profile</span>
             </h4>
@@ -62,14 +57,14 @@
                     </div>
                 </li>
             </ul>
-            {% endif %}
+
 
         </div>
     </div>
     <div class="col-md-3 col-lg-4">
         <div class="mt-5 mb-3">
             <h4 class="d-flex justify-content-between align-items-center mb-3">
-                <span class="text-danger">Order History</span>
+                <span class="text-danger">Active Orders</span>
                 <span class="badge bg-danger rounded-pill">{{ total_orders }}</span>
             </h4>
             {% if orders %}
@@ -78,19 +73,19 @@
                 <li class="list-group-item d-flex justify-content-between lh-sm">
                     <div>
                         <h6 class="my-0">
-                            <a href="#"
+                            <a href="{{ url_for('orders.order_detail', id=order.id)}}"
                                 class="text-decoration-none text-danger">
                                 Order No. {{ order.id }}-{{ order.time_created.strftime('%Y%m%d') }}
                             </a>
                         </h6>
-                        <small class="text-muted">Status: {{ order.delivery_status }}</small>
+                        <small class="text-muted">Payment: {{ order.payment_status }}</small>
 
                     </div>
                 </li>
                 {% endfor %}
             </ul>
             <div>
-                <a href="{{ url_for('products.index') }}" class="btn btn-outline-danger w-100">See All Orders</a>
+                <a href="{{ url_for('accounts.orders_history') }}" class="btn btn-outline-danger w-100">See All Orders</a>
             </div>
             {% else %}
             <ul class="list-group mb-3">
