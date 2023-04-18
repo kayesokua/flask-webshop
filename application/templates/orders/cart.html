@@ -48,7 +48,17 @@
     <hr class="my-3" />
 		<h3 class="display-6"> Total payment: € {{ total_payment |round(2, 'floor') }}</h3>
 
-		<p> <a href="{{ url_for('orders.checkout') }}" class="btn btn-lg btn-danger my-3">Proceed to checkout</a></p>
+    {% if not current_user.is_mobile_verified %}
+    <p class="font-size-lg">Please verify your mobile number before checking out.</p>
+    <p>
+      <a href="{{ url_for('accounts.verify_mobile') }}" class="btn btn-lg btn-outline-danger my-3">Verify Mobile</a>
+      <a href="#" class="btn btn-lg btn-outline-secondary my-3 disabled">Proceed to checkout</a>
+
+    </p>
+    {% else %}
+    <p> <a href="{{ url_for('orders.checkout') }}" class="btn btn-lg btn-danger my-3">Proceed to checkout</a></p>
+    {% endif %}
+
     {% else %}
     <h3>You have 0 items in your cart.</h3>
     {% endif %}

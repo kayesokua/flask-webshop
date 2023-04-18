@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Account Settings{% endblock %}
+{% block content %}
+
+
+<div class="container row">
+
+    <div class="col-md-6 col-lg-6">
+        <div class="mt-5 mb-3">
+            <h2 class="display-5">{{ title }}</h2>
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-warning" role="alert">
+
+                {{ message }}
+
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+
+
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-3 col-lg-4">
+        <div class="mt-5 mb-3">
+            <h4 class="d-flex justify-content-between align-items-center mt-3 mb-3">
+                <span class="text-danger">Active Products</span>
+                <span class="badge bg-danger rounded-pill">{{ total_products }}</span>
+            </h4>
+            {% if products %}
+            <ul class="list-group mb-3">
+                {% for product in products %}
+                <li class="list-group-item d-flex justify-content-between lh-sm">
+                    <div>
+                        <h6 class="my-0">
+                            <a href="{{ url_for('products.update_product', id=product['id']) }}"
+                                class="text-decoration-none text-danger">
+                                {{ product.name }}
+                            </a>
+                        </h6>
+                        <small class="text-muted">{{ product.description }}</small>
+                        <small class="text-muted">€ {{ product.price }}, {{ product.stock }}</small>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            <div>
+                <a href="{{ url_for('products.index') }}" class="btn btn-outline-danger w-100">Start Shopping</a>
+            </div>
+            {% else %}
+            <ul class="list-group mb-3">
+                <li class="list-group-item d-flex justify-content-between lh-sm">
+                    <div>
+                        <h6 class="my-0">No Products</h6>
+                        <small class="text-muted">No purchases yet.</small>
+                    </div>
+                </li>
+            </ul>
+            <div>
+                <a href="{{ url_for('products.create_product') }}" class="btn btn-outline-danger w-100">Add Product</a>
+            </div>
+            {% endif %}
+
+
+        </div>
+
+    </div>
+</div>
+
+
+{% endblock %}
