@@ -1,0 +1,25 @@
+
+shipping_options = [
+    {
+        "shipping_rate_data": {
+            "type": "fixed_amount",
+            "fixed_amount": {"amount": 590, "currency": "eur"},
+            "display_name": "Standard Shipping",
+            "delivery_estimate": {
+                "minimum": {"unit": "business_day", "value": 5},
+                "maximum": {"unit": "business_day", "value": 7},
+            },
+        },
+    },
+    {
+        "shipping_rate_data": {
+            "type": "fixed_amount",
+            "fixed_amount": {"amount": 990, "currency": "eur"},
+            "display_name": "Next day air",
+            "delivery_estimate": {
+                "minimum": {"unit": "business_day", "value": 1},
+                "maximum": {"unit": "business_day", "value": 1},
+            },
+        },
+    },
+]

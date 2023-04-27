@@ -88,36 +88,49 @@ def cart():
 def checkout():
     form = CheckoutForm()
     products, grand_total, shipping_fee, total_payment = handle_cart()
+
     if form.validate_on_submit():
-        selected_address_id = form.selected_address.data
-        new_order = Orders(
-            address_id=selected_address_id,
-            buyer_id=current_user.id,
-            shipping_fee=shipping_fee,
-            grand_total=total_payment)
+        new_order = create_new_order(form, shipping_fee, total_payment)
+        add_order_lines(new_order, products)
+        update_product_stock(products)
+        clear_session_cart()
+        line_items = get_line_items(new_order.id)
+        create_stripe_session(new_order, line_items)
+        send_checkout_verification(current_user.mobile, new_order)
+        return redirect(f"/orders/{new_order.id}")
 
-        db.session.add(new_order)
+    return render_template('orders/checkout.html', form=form, products=products, grand_total=grand_total, shipping_fee=shipping_fee, total_payment=total_payment)
+
+def create_new_order(form, shipping_fee, total_payment):
+    selected_address_id = form.selected_address.data
+    new_order = Orders(
+        address_id=selected_address_id,
+        buyer_id=current_user.id,
+        shipping_fee=shipping_fee,
+        grand_total=total_payment)
+
+    db.session.add(new_order)
+    db.session.commit()
+    return new_order
+
+def add_order_lines(new_order, products):
+    for product in products:
+        order_line = OrderLine(order_id=new_order.id, product_id=product['id'], quantity=product['qty'], total_price=product['qty_total_price'])
+        db.session.add(order_line)
         db.session.commit()
 
-        for product in products:
-            print(product)
-            order_line = OrderLine(order_id=new_order.id, product_id=product['id'], quantity=product['qty'], total_price=product['qty_total_price'])
-            db.session.add(order_line)
-            db.session.commit()
-
+def update_product_stock(products):
+    for product in products:
         product_update_stock = Product.query.filter_by(id=product['id']).first()
-        product_update_stock.stock =  product_update_stock.stock - product['qty']
+        product_update_stock.stock -= product['qty']
         db.session.commit()
 
-        session['cart'].pop()
-        session.modified = True
+def clear_session_cart():
+    session['cart'].pop()
+    session.modified = True
 
-        order_id = new_order.id
-
-        stripe.api_key = os.environ.get('STRIPE_SECRET_KEY_DEV')
-        domain_url = os.environ.get('DOMAIN_URL_DEV')
-
-        line_items = (
+def get_line_items(order_id):
+    line_items_data = (
         db.session.query(
             Prices.stripe_price_id,
             OrderLine.quantity
@@ -135,47 +148,49 @@ def checkout():
         )
         .all())
 
-        line_items = [{"price": price, "quantity": quantity} for price, quantity in line_items]
+    return [{"price": price, "quantity": quantity} for price, quantity in line_items_data]
 
-        stripe_session = stripe.checkout.Session.create(
-            shipping_options=[
-                {
-                "shipping_rate_data": {
-                    "type": "fixed_amount",
-                    "fixed_amount": {"amount": 590, "currency": "eur"},
-                    "display_name": "Standard Shipping",
-                    "delivery_estimate": {
+def create_stripe_session(new_order, line_items):
+    stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
+    domain_url = os.environ.get('DOMAIN_URL')
+
+    shipping_options = [
+        {
+            "shipping_rate_data": {
+                "type": "fixed_amount",
+                "fixed_amount": {"amount": 590, "currency": "eur"},
+                "display_name": "Standard Shipping",
+                "delivery_estimate": {
                     "minimum": {"unit": "business_day", "value": 5},
                     "maximum": {"unit": "business_day", "value": 7},
-                    },
                 },
-                },
-                {
-                "shipping_rate_data": {
-                    "type": "fixed_amount",
-                    "fixed_amount": {"amount": 990, "currency": "eur"},
-                    "display_name": "Next day air",
-                    "delivery_estimate": {
+            },
+        },
+        {
+            "shipping_rate_data": {
+                "type": "fixed_amount",
+                "fixed_amount": {"amount": 990, "currency": "eur"},
+                "display_name": "Next day air",
+                "delivery_estimate": {
                     "minimum": {"unit": "business_day", "value": 1},
                     "maximum": {"unit": "business_day", "value": 1},
-                    },
                 },
-                },],
-            mode="payment",
-            line_items=line_items,
-            success_url=f"{domain_url}/orders/{order_id}/payment",
-            cancel_url=f"{domain_url}/orders/{order_id}/payment",
-        )
+            },
+        },
+    ]
 
-        order = Orders.query.filter_by(id=order_id).first()
-        order.stripe_payment_id = stripe_session.id
-        order.stripe_payment_url = stripe_session.url
-        db.session.commit()
+    stripe_session = stripe.checkout.Session.create(
+        shipping_options=shipping_options,
+        mode="payment",
+        line_items=line_items,
+        success_url=f"{domain_url}/orders/{new_order.id}/payment",
+        cancel_url=f"{domain_url}/orders/{new_order.id}/payment",
+    )
 
-        send_checkout_verification(mobile=current_user.mobile, order=order)
-
-        return redirect(f"/orders/{order_id}")
-    return render_template('orders/checkout.html', form=form, products=products, grand_total=grand_total, shipping_fee=shipping_fee, total_payment=total_payment)
+    order = Orders.query.filter_by(id=new_order.id).first()
+    order.stripe_payment_id = stripe_session.id
+    order.stripe_payment_url = stripe_session.url
+    db.session.commit()
 
 @bp.route("/orders/<uuid:id>/payment")
 def payment_successful(id):
