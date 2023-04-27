@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} {% endblock %}
+
+{% block content %}
+
+<section class="text-center container">
+  <div class="row py-lg-5">
+    <div class="col-lg-6 col-md-8 mx-auto">
+      <h1 class="fw-light">{{ title }}</h1>
+
+    </div>
+  </div>
+</section>
+
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<ul class="flashes text-danger">
+  {% for message in messages %}
+  <li>{{ message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endwith %}
+
+<div class="row mb-2">
+  {% if orders_history %}
+  {% for order in orders_history %}
+    {{order}}
+  {% endfor %}
+  {% endif %}
+
+</div>
+
+<div class="album py-5">
+  <div class="container">
+
+
+  </div>
+</div>
+</div>
+
+{% endblock %}

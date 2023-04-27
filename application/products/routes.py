@@ -75,7 +75,7 @@ def create_product():
     else:
         return render_template('products/form.html', title="Add Product", form=form)
 
-@bp.route('/<int:id>/', methods=('GET', 'POST'))
+@bp.route('/<uuid:id>/', methods=('GET', 'POST'))
 @cache.cached(timeout=60, key_prefix='read_product')
 @login_required
 def read_product(id):
@@ -101,7 +101,7 @@ def read_product(id):
         session.modified = True
     return render_template('products/detail.html', product=product, recommendations=recommendations)
 
-@bp.route('/<int:id>/update', methods=['GET', 'POST'])
+@bp.route('/<uuid:id>/update', methods=['GET', 'POST'])
 @limiter.limit("1 per minute")
 @cache.cached(timeout=60, key_prefix='update_product')
 @login_required
