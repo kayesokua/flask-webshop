@@ -15,15 +15,14 @@ class Product(db.Model):
     description = Column(String, nullable=False)
     image = Column(String, nullable=False)
     stripe_product_ref = Column(String, nullable=True)
-    price_id = Column(UUID(as_uuid=True), ForeignKey('prices.id'), nullable=True)
     time_created = Column(DateTime(timezone=True), server_default=func.now())
     time_updated = Column(DateTime(timezone=True), onupdate=func.now())
     admin = relationship('User', backref='products')
-
 class Prices(db.Model):
     __tablename__ = 'prices'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    product_id = Column(UUID(as_uuid=True), ForeignKey('products.id'))
     price = Column(Float)
     stripe_price_id = Column(String)
     time_created = Column(DateTime(timezone=True), server_default=func.now())
+    product_id = Column(UUID(as_uuid=True), ForeignKey('products.id'))
+    product = relationship('Product', backref='prices')
