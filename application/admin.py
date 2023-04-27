@@ -16,7 +16,9 @@ def create_admin(username, password):
                 username=username,
                 hashed_password=hashed_password,
                 salt=salt,
-                last_password_change=datetime.utcnow())
+                last_password_change=datetime.utcnow(),
+                is_admin=True,
+                is_seller=True)
             db.session.add(user)
             db.session.commit()
 
