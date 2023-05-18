@@ -7,7 +7,7 @@ from application.extensions.limiter import limiter
 
 def create_app():
     app = Flask(__name__)
-    app.config.from_object('config.DevelopmentConfig')
+    app.config.from_object('config.ProductionConfig')
     db.init_app(app)
     cache.init_app(app, config={'CACHE_TYPE': 'simple'})
     limiter.init_app(app)
