@@ -39,6 +39,9 @@ Tampering Prevention
 - [ ] Implement HTTPS to prevent eavesdropping and ensure data integrity through digital signatures
 - [x] Use secure cookies and implement the HttpOnly and Secure attributes
 
+Repudiation
+- [x] Data pertaining to purchase and orders is could be 'inactive' but not deleted. 'is_active' column is added for tables.
+
 Information Disclosure
 
 - [x]  Mask sensitive information on the front-end using asterisks
