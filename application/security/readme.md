@@ -39,6 +39,9 @@ Tampering Prevention
 - [ ] Implement HTTPS to prevent eavesdropping and ensure data integrity through digital signatures
 - [x] Use secure cookies and implement the HttpOnly and Secure attributes
 
+Repudiation
+- [x] Preserving the data to protect against fraudulent activities or misunderstandings by establishing a reliable historical record.
+
 Information Disclosure
 
 - [x]  Mask sensitive information on the front-end using asterisks
